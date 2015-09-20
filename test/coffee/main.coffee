@@ -1,16 +1,20 @@
 init = =>
 
+  $logBlock = $ '#ui-log-block'
+
   altCadesPlugin = new AltCadesPlugin()
 
+  # проверка наличия плагина
+  $logBlock.append '<h3>Проверка наличия плагина<h4>'
   if bowser.chrome and bowser.version >= 40
     deferred = altCadesPlugin.nonNpapiInit()
   else
     deferred = $.Deferred ->
-      @reject 'Browser unsupport'
+      @reject 'Браузер не поддерживается'
 
   deferred.then ->
-    alert 'OK'
+    $logBlock.append '<p>Плагин подключен<p>'
   .fail (message)->
-    alert message
+    $logBlock.append '<p>' + message + '<p>'
 
 $ init
