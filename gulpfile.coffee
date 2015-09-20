@@ -8,7 +8,7 @@ connect = require 'gulp-connect'
 
 # основная джоба
 gulp.task 'build', (callback)->
-  sequence 'api', 'main', 'jquery', callback
+  sequence 'api', 'main', 'jquery', 'webserver', callback
 
 # джоба для компиляции alt_cadesplugin_api.coffee в alt_cadesplugin_api.js
 gulp.task 'api', (callback)->
