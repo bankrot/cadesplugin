@@ -54,11 +54,11 @@ AltCadesPlugin = class
     return onFulfilled()
 
   ###*
-  Инициализирует работу плагина в браузере Google Chrome
-  @method chromeInit
+  Инициализирует работу плагина в браузере без NPAPI (Например Google Chrome)
+  @method nonNpapiInit
   @return {jQuery.Deferred} Deferred объект
   ###
-  chromeInit: =>
+  nonNpapiInit: =>
     ###*
     Подключаем файл из плагина
     ###

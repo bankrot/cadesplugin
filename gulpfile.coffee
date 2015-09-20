@@ -5,10 +5,14 @@ uglify = require 'gulp-uglify'
 rename = require 'gulp-rename'
 connect = require 'gulp-connect'
 
+# запускает автосборщик, при этом вебсервер надо запускать отдельно
+gulp.task 'default', ['build'], ->
+  gulp.watch ['src/**/*.coffee'], ['api']
+  gulp.watch ['test/coffee/**/*.coffee'], ['main']
 
 # основная джоба
 gulp.task 'build', (callback)->
-  sequence 'api', 'main', 'jquery', 'webserver', callback
+  sequence 'api', 'main', 'libs', callback
 
 # джоба для компиляции alt_cadesplugin_api.coffee в alt_cadesplugin_api.js
 gulp.task 'api', (callback)->
@@ -27,8 +31,8 @@ gulp.task 'main', (callback)->
   .pipe gulp.dest './test/js'
 
 # копирует jquery из node_modules
-gulp.task 'jquery', (callback)->
-  gulp.src './node_modules/jquery/dist/jquery.js'
+gulp.task 'libs', (callback)->
+  gulp.src ['./node_modules/jquery/dist/jquery.js', './node_modules/bowser/src/bowser.js']
   .pipe gulp.dest './test/js'
 
 # запускает вебсервер для тестирования

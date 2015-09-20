@@ -2,10 +2,15 @@ init = =>
 
   altCadesPlugin = new AltCadesPlugin()
 
-  altCadesPlugin.chromeInit()
-  .then ->
+  if bowser.chrome and bowser.version >= 40
+    deferred = altCadesPlugin.nonNpapiInit()
+  else
+    deferred = $.Deferred ->
+      @reject 'Browser unsupport'
+
+  deferred.then ->
     alert 'OK'
-  .fail ->
-    aler 'fail'
+  .fail (message)->
+    alert message
 
 $ init

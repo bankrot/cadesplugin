@@ -37,7 +37,7 @@
      */
 
     function _Class() {
-      this.chromeInit = bind(this.chromeInit, this);
+      this.nonNpapiInit = bind(this.nonNpapiInit, this);
       this.cadesplugin.JSModuleVersion = '2.0';
       this.cadesplugin.async_spawn = this.asyncSpawn;
       this.cadesplugin.set = (function(_this) {
@@ -79,12 +79,12 @@
 
 
     /**
-    Инициализирует работу плагина в браузере Google Chrome
-    @method chromeInit
+    Инициализирует работу плагина в браузере без NPAPI (Например Google Chrome)
+    @method nonNpapiInit
     @return {jQuery.Deferred} Deferred объект
      */
 
-    _Class.prototype.chromeInit = function() {
+    _Class.prototype.nonNpapiInit = function() {
 
       /**
       Подключаем файл из плагина

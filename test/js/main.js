@@ -3,12 +3,19 @@
 
   init = (function(_this) {
     return function() {
-      var altCadesPlugin;
+      var altCadesPlugin, deferred;
       altCadesPlugin = new AltCadesPlugin();
-      return altCadesPlugin.chromeInit().then(function() {
+      if (bowser.chrome && bowser.version >= 40) {
+        deferred = altCadesPlugin.nonNpapiInit();
+      } else {
+        deferred = $.Deferred(function() {
+          return this.reject('Browser unsupport');
+        });
+      }
+      return deferred.then(function() {
         return alert('OK');
-      }).fail(function() {
-        return aler('fail');
+      }).fail(function(message) {
+        return alert(message);
       });
     };
   })(this);
