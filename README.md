@@ -1,5 +1,4 @@
 # Cadesplugin
-======================================
 
 Альтернативная библиотека для работы с [плагином от КриптоПРО](https://www.cryptopro.ru/sites/default/files/products/cades/demopage/main.html).
 
