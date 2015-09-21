@@ -23,10 +23,22 @@ init = (function(_this) {
       if (installedVersion === ((ref = currentVersion[0]) != null ? ref.trim() : void 0)) {
         $logBlock.append('<p>У вас последняя версия плагина (' + installedVersion + ')<p>');
       } else {
-        return $.Deferred(function() {
-          return this.reject('Плагин нужно обновить');
-        });
+        $logBlock.append('<p>У вас не последняя версия плагина. Рекомендуем обновить.<p>');
       }
+      return $.when(altCadesPlugin.get('CAdESCOM.About', {
+        paramName: 'CSPVersion',
+        options: ['', 75]
+      }, 'MajorVersion'), altCadesPlugin.get('CAdESCOM.About', {
+        paramName: 'CSPVersion',
+        options: ['', 75]
+      }, 'MinorVersion'), altCadesPlugin.get('CAdESCOM.About', {
+        paramName: 'CSPVersion',
+        options: ['', 75]
+      }, 'BuildVersion'));
+    }).then(function(majorVersion, minorVersion, buildVersion) {
+      var installedCspVersion;
+      installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion;
+      $logBlock.append('<p>Версия CSP (' + installedCspVersion + ')<p>');
       return $signBlock.show();
     }).fail(function(message) {
       return $logBlock.append('<p style="color: #E23131">' + message + '<p>');

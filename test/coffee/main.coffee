@@ -27,7 +27,17 @@ init = =>
     if installedVersion is currentVersion[0]?.trim()
       $logBlock.append '<p>У вас последняя версия плагина (' + installedVersion + ')<p>'
     else
-      return $.Deferred -> @reject 'Плагин нужно обновить'
+      $logBlock.append '<p>У вас не последняя версия плагина. Рекомендуем обновить.<p>'
+
+    $.when(
+      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'MajorVersion'
+      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'MinorVersion'
+      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'BuildVersion'
+    )
+
+  .then (majorVersion, minorVersion, buildVersion)->
+    installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
+    $logBlock.append '<p>Версия CSP (' + installedCspVersion + ')<p>'
     $signBlock.show()
 
   .fail (message)->

@@ -173,19 +173,29 @@ AltCadesPlugin = (function() {
   Возвращает параметр из объекта
   @method getParam
   @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
-  @param paramName {String} Имя параметра
+  @param paramName {Object|String} Имя параметра.
+    Или объект с ключами paramName и options на случай если параметр нужно получить через выполнение функции
   @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
    */
 
   _Class.prototype.getParam = function(objectName, paramName) {
-    var chain, deferred;
+    var chain, deferred, param;
+    param = function(_object, _param) {
+      var p;
+      if (typeof _param === 'object') {
+        return _object[_param.paramName].apply(null, _param.options);
+      } else {
+        p = _object[_param];
+        return p;
+      }
+    };
     deferred = $.Deferred();
     if (typeof objectName === 'string') {
       chain = this.pluginObject.CreateObjectAsync(objectName).then(function(object) {
-        return object[paramName];
+        return param(object, paramName);
       });
     } else {
-      chain = objectName[paramName];
+      chain = param(objectName, paramName);
     }
     chain.then(function(value) {
       return deferred.resolve(value);
