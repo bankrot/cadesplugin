@@ -22,11 +22,22 @@ AltCadesPlugin = class
   pluginObject: null
 
   ###*
+  Время ожидания ответа от плагина
+  @property timeout
+  @type {Number}
+  ###
+  timeout: 20000
+
+  ###*
   Конструктор
   @method constructor
   @param options {Object} Опции
+  @param [options.timeout] {Number} Время ожидания ответа плагина, в мс. По умолчанию 20000
   ###
-  constructor: ->
+  constructor: (options = {})->
+    if options.timeout
+      @timeout = options.timeout
+
     @cadesplugin.JSModuleVersion = '2.0'
     @cadesplugin.async_spawn = @asyncSpawn
     @cadesplugin.set = (object)=>
@@ -59,42 +70,65 @@ AltCadesPlugin = class
   @return {jQuery.Deferred} Deferred объект
   ###
   nonNpapiInit: =>
-    ###*
-    Подключаем файл из плагина
-    ###
-    fileref = document.createElement('script')
-    fileref.setAttribute 'type', 'text/javascript'
-    fileref.setAttribute 'src', 'chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js'
-    document.getElementsByTagName('head')[0].appendChild fileref
+    # подключаем файл из плагина
+    $('head').append '<script src="chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js"></script>'
 
     deferred = $.Deferred()
 
     window.postMessage 'cadesplugin_echo_request', '*'
 
-    ###*
-    Отправляем событие что все ок.
-    ###
+    # sucess callback
     success = =>
       @checked = true
       deferred.resolve()
 
-    ###*
-    Отправляем событие что сломались.
-    ###
+    # fail callback
     fail = (message)=>
       @checked = true
-      deferred.reject(message)
+      deferred.reject message
 
-    ###*
-    Обработчик события по загрузке плагина
-    ###
+    # обработчик события по загрузке плагина
     listener = (event)->
       if event.data isnt 'cadesplugin_loaded'
         return
       cpcsp_chrome_nmcades.check_chrome_plugin success, fail
+
     window.addEventListener 'message', listener, false
 
+    # если через @timeout мс плагин все еще не вернул ответ, значит ошибка
+    setTimeout (=>
+      unless @checked
+        deferred.reject 'timeout'
+    ), @timeout
+
     return deferred
+
+  createObject: (name)=>
+    deferred = $.Deferred()
+    @pluginObject.CreateObjectAsync name
+    .then (value)->
+      deferred.resolve value
+    , (value)->
+      deferred.reject value
+    return deferred
+
+  getParam: (objectName, paramName)=>
+    deferred = $.Deferred()
+
+    if typeof objectName is 'string'
+      chain = @pluginObject.CreateObjectAsync objectName
+      .then (object)->
+        object[paramName]
+    else
+      chain = objectName[paramName]
+
+    chain.then (value)->
+      deferred.resolve value
+    , (value)->
+      deferred.reject value
+    return deferred
+
+
 
 
 ###*

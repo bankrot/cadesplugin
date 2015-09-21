@@ -4,6 +4,7 @@ coffee = require 'gulp-coffee'
 uglify = require 'gulp-uglify'
 rename = require 'gulp-rename'
 connect = require 'gulp-connect'
+proxy = require 'http-proxy-middleware'
 
 # запускает автосборщик, при этом вебсервер надо запускать отдельно
 gulp.task 'default', ['build'], ->
@@ -17,7 +18,8 @@ gulp.task 'build', (callback)->
 # джоба для компиляции alt_cadesplugin_api.coffee в alt_cadesplugin_api.js
 gulp.task 'api', (callback)->
   gulp.src './src/alt_cadesplugin_api.coffee'
-  .pipe coffee()
+  .pipe coffee({bare: true}).on 'error', (error)->
+    console.log error
   .pipe gulp.dest './src'
   .pipe gulp.dest './test/js'
   .pipe uglify()
@@ -27,7 +29,8 @@ gulp.task 'api', (callback)->
 # джоба для компиляции main.coffee в main.js
 gulp.task 'main', (callback)->
   gulp.src './test/coffee/main.coffee'
-  .pipe coffee()
+  .pipe coffee({bare: true}).on 'error', (error)->
+    console.log error
   .pipe gulp.dest './test/js'
 
 # копирует jquery из node_modules
@@ -40,3 +43,11 @@ gulp.task 'webserver', (callback)->
   connect.server
     root: 'test'
     livereload: true
+    middleware: (connect, opt)->
+      return [
+        proxy('/sites', {
+          target: 'http://www.cryptopro.ru'
+          changeOrigin: true
+          ws: true
+        })
+      ]
