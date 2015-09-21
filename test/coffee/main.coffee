@@ -13,6 +13,7 @@ init = =>
     deferred = $.Deferred ->
       @reject 'Браузер не поддерживается'
 
+  # проверка версии плагина
   deferred.then ->
     $logBlock.append '<p>Плагин подключен<p>'
     $.when(
@@ -22,6 +23,7 @@ init = =>
       $.get '/sites/default/files/products/cades/latest_2_0.txt'
     )
 
+  # проверка версии CSP
   .then (majorVersion, minorVersion, buildVersion, currentVersion)->
     installedVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
     if installedVersion is currentVersion[0]?.trim()
@@ -35,9 +37,26 @@ init = =>
       altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'BuildVersion'
     )
 
+  # получение списка сертификатов
   .then (majorVersion, minorVersion, buildVersion)->
     installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
     $logBlock.append '<p>Версия CSP (' + installedCspVersion + ')<p>'
+
+    store = null
+    certificates = null
+    altCadesPlugin.createObject 'CAdESCOM.Store'
+    .then (_store)->
+      store = _store
+      altCadesPlugin.get store, {paramName: 'Open', options: []}
+    .then ->
+      altCadesPlugin.get store, 'Certificates'
+    .then (_certificates)->
+      certificates = _certificates
+      altCadesPlugin.get certificates, 'Count'
+    .then (count)->
+      $logBlock.append '<p>Количество сертификатов ' + +count + '<p>'
+
+  .then ->
     $signBlock.show()
 
   .fail (message)->

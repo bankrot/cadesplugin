@@ -36,9 +36,26 @@ init = (function(_this) {
         options: ['', 75]
       }, 'BuildVersion'));
     }).then(function(majorVersion, minorVersion, buildVersion) {
-      var installedCspVersion;
+      var certificates, installedCspVersion, store;
       installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion;
       $logBlock.append('<p>Версия CSP (' + installedCspVersion + ')<p>');
+      store = null;
+      certificates = null;
+      return altCadesPlugin.createObject('CAdESCOM.Store').then(function(_store) {
+        store = _store;
+        return altCadesPlugin.get(store, {
+          paramName: 'Open',
+          options: []
+        });
+      }).then(function() {
+        return altCadesPlugin.get(store, 'Certificates');
+      }).then(function(_certificates) {
+        certificates = _certificates;
+        return altCadesPlugin.get(certificates, 'Count');
+      }).then(function(count) {
+        return $logBlock.append('<p>Количество сертификатов ' + +count + '<p>');
+      });
+    }).then(function() {
       return $signBlock.show();
     }).fail(function(message) {
       return $logBlock.append('<p style="color: #E23131">' + message + '<p>');

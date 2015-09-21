@@ -113,6 +113,12 @@ AltCadesPlugin = class
 
     return deferred
 
+  ###*
+  Создает объект плагина по названию
+  @method createObject
+  @param name {String} Название объекта
+  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
+  ###
   createObject: (name)=>
     deferred = $.Deferred()
     @pluginObject.CreateObjectAsync name
