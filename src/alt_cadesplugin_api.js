@@ -1,5 +1,19 @@
-var AltCadesPlugin,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+;(function(root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define(['jquery'], factory);
+  } else if (typeof exports === 'object') {
+    module.exports = factory(require('jquery'));
+  } else {
+    root.AltCadesPlugin = factory(root.$);
+  }
+}(this, function(jquery) {
+var $, AltCadesPlugin,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  slice = [].slice;
+
+if (jquery && !$) {
+  $ = jquery;
+}
 
 AltCadesPlugin = (function() {
 
@@ -49,6 +63,7 @@ AltCadesPlugin = (function() {
     if (options == null) {
       options = {};
     }
+    this.get = bind(this.get, this);
     this.getParam = bind(this.getParam, this);
     this.createObject = bind(this.createObject, this);
     this.nonNpapiInit = bind(this.nonNpapiInit, this);
@@ -146,6 +161,15 @@ AltCadesPlugin = (function() {
     return deferred;
   };
 
+
+  /**
+  Возвращает параметр из объекта
+  @method getParam
+  @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
+  @param paramName {String} Имя параметра
+  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
+   */
+
   _Class.prototype.getParam = function(objectName, paramName) {
     var chain, deferred;
     deferred = $.Deferred();
@@ -164,13 +188,34 @@ AltCadesPlugin = (function() {
     return deferred;
   };
 
+
+  /**
+  Возвращает последний параметр из цепочки
+  Например вызов altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'MajorVersion') вернет MajorVersion в колбэк
+  @method get
+  @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
+  @param paramName {String} Имя параметра. Таких параметров можно передавать неограниченное количество.
+  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
+   */
+
+  _Class.prototype.get = function() {
+    var args, objectName, paramName;
+    objectName = arguments[0], paramName = arguments[1], args = 3 <= arguments.length ? slice.call(arguments, 2) : [];
+    return this.getParam(objectName, paramName).then((function(_this) {
+      return function(object) {
+        if (args.length > 0) {
+          args.unshift(object);
+          return _this.get.apply(_this, args);
+        } else {
+          return object;
+        }
+      };
+    })(this));
+  };
+
   return _Class;
 
 })();
 
-
-/**
-Делаем класс доступным глобально
- */
-
-window.AltCadesPlugin = AltCadesPlugin;
+return AltCadesPlugin;
+}));

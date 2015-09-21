@@ -1,6 +1,7 @@
 gulp = require 'gulp'
 sequence    = require('run-sequence').use(gulp)
 coffee = require 'gulp-coffee'
+umd = require 'gulp-umd'
 uglify = require 'gulp-uglify'
 rename = require 'gulp-rename'
 connect = require 'gulp-connect'
@@ -20,6 +21,21 @@ gulp.task 'api', (callback)->
   gulp.src './src/alt_cadesplugin_api.coffee'
   .pipe coffee({bare: true}).on 'error', (error)->
     console.log error
+  .pipe umd
+    exports: (file)->
+      return 'AltCadesPlugin'
+    namespace: (file)->
+      return 'AltCadesPlugin'
+    dependencies: (file)->
+      return [
+        {
+          name: 'jquery'
+          amd: 'jquery'
+          cjs: 'jquery'
+          global: '$'
+          param: 'jquery'
+        }
+      ]
   .pipe gulp.dest './src'
   .pipe gulp.dest './test/js'
   .pipe uglify()

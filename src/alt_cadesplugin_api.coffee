@@ -1,3 +1,6 @@
+if jquery and not $
+  $ = jquery
+
 AltCadesPlugin = class
 
   ###*
@@ -112,6 +115,13 @@ AltCadesPlugin = class
       deferred.reject value
     return deferred
 
+  ###*
+  Возвращает параметр из объекта
+  @method getParam
+  @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
+  @param paramName {String} Имя параметра
+  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
+  ###
   getParam: (objectName, paramName)=>
     deferred = $.Deferred()
 
@@ -128,10 +138,19 @@ AltCadesPlugin = class
       deferred.reject value
     return deferred
 
-
-
-
-###*
-Делаем класс доступным глобально
-###
-window.AltCadesPlugin = AltCadesPlugin
+  ###*
+  Возвращает последний параметр из цепочки
+  Например вызов altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'MajorVersion') вернет MajorVersion в колбэк
+  @method get
+  @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
+  @param paramName {String} Имя параметра. Таких параметров можно передавать неограниченное количество.
+  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
+  ###
+  get: (objectName, paramName, args...)=>
+    @getParam objectName, paramName
+    .then (object)=>
+      if args.length > 0
+        args.unshift object
+        return @get.apply @, args
+      else
+        return object

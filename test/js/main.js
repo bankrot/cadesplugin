@@ -16,9 +16,7 @@ init = (function(_this) {
     }
     return deferred.then(function() {
       $logBlock.append('<p>Плагин подключен<p>');
-      return altCadesPlugin.getParam('CAdESCOM.About', 'PluginVersion');
-    }).then(function(pluginVersion) {
-      return $.when(altCadesPlugin.getParam(pluginVersion, 'MajorVersion'), altCadesPlugin.getParam(pluginVersion, 'MinorVersion'), altCadesPlugin.getParam(pluginVersion, 'BuildVersion'), $.get('/sites/default/files/products/cades/latest_2_0.txt'));
+      return $.when(altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'MajorVersion'), altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'MinorVersion'), altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'BuildVersion'), $.get('/sites/default/files/products/cades/latest_2_0.txt'));
     }).then(function(majorVersion, minorVersion, buildVersion, currentVersion) {
       var installedVersion, ref;
       installedVersion = majorVersion + '.' + minorVersion + '.' + buildVersion;
