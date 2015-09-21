@@ -101,7 +101,9 @@ AltCadesPlugin = class
     listener = (event)->
       if event.data isnt 'cadesplugin_loaded'
         return
-      cpcsp_chrome_nmcades.check_chrome_plugin success, fail
+      setTimeout (->
+        cpcsp_chrome_nmcades.check_chrome_plugin success, fail
+      ), 0
 
     window.addEventListener 'message', listener, false
 

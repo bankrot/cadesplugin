@@ -144,7 +144,9 @@ AltCadesPlugin = (function() {
       if (event.data !== 'cadesplugin_loaded') {
         return;
       }
-      return cpcsp_chrome_nmcades.check_chrome_plugin(success, fail);
+      return setTimeout((function() {
+        return cpcsp_chrome_nmcades.check_chrome_plugin(success, fail);
+      }), 0);
     };
     window.addEventListener('message', listener, false);
     setTimeout(((function(_this) {
