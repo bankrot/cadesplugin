@@ -7,6 +7,13 @@
     root.AltCadesPlugin = factory(root.$);
   }
 }(this, function(jquery) {
+
+/**
+Библиотека для работы с плагином КриптоПРО
+Версия 1.0.0 (в разработке)
+Поддерживает плагин версии 2.0.12245
+Репозиторий https://github.com/bankrot/cadesplugin
+ */
 var $, AltCadesPlugin,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   slice = [].slice;
