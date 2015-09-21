@@ -1,0 +1,25 @@
+{
+  "name": "cadesplugin",
+  "version": "0.0.1",
+  "homepage": "https://github.com/bankrot/cadesplugin",
+  "description": "CryptoPRO plugin api library (Крипто ПРО)",
+  "main": "src/alt_cadesplugin_api.js",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "cryptopro",
+    "криптопро",
+    "scp",
+    "эцп",
+    "подпись",
+    "signature"
+  ],
+  "authors": [
+    "Volkov Sergey"
+  ],
+  "license": "MIT",
+  "ignore": []
+}
