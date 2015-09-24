@@ -10,8 +10,7 @@ init = =>
   if bowser.chrome and bowser.version >= 40
     deferred = altCadesPlugin.nonNpapiInit()
   else
-    deferred = $.Deferred ->
-      @reject 'Браузер не поддерживается'
+    deferred = $.Deferred -> @reject 'Браузер не поддерживается'
 
   # проверка версии плагина
   deferred.then ->
@@ -42,8 +41,11 @@ init = =>
     installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
     $logBlock.append '<p>Версия CSP (' + installedCspVersion + ')<p>'
 
-    store = null
-    certificates = null
+    store = null # хранилище сертификатов
+    certificates = null # сертификаты
+    #count = null # количество сертификатов
+    certificatesList = []
+
     altCadesPlugin.createObject 'CAdESCOM.Store'
     .then (_store)->
       store = _store
@@ -54,7 +56,47 @@ init = =>
       certificates = _certificates
       altCadesPlugin.get certificates, 'Count'
     .then (count)->
+      unless count
+        store.Close()
+        return $.Deferred -> @reject 'Не установлено ни одного сертификата'
       $logBlock.append '<p>Количество сертификатов ' + +count + '<p>'
+
+      chain = $.when()
+      $.each [1..count], (i, index)->
+        chain = chain.then ->
+          altCadesPlugin.get certificates, {paramName: 'Item', options: [index]}
+        .then (certificate)->
+          $.when(
+            altCadesPlugin.get certificate, 'ValidFromDate'
+            altCadesPlugin.get certificate, 'ValidToDate'
+            altCadesPlugin.get certificate, {paramName: 'HasPrivateKey', options: []}
+            altCadesPlugin.get certificate, {paramName: 'IsValid', options: []}, 'Result'
+            altCadesPlugin.get certificate, 'SubjectName'
+          )
+        .then (validFromDate, validToDate, hasPrivateKey, isValid, subjectName)->
+          date = new Date()
+          validToDate = new Date(validToDate)
+          if date < validToDate and hasPrivateKey and isValid
+            certificatesList.push
+              subjectName: subjectName
+              validFromDate: validFromDate
+        .then null, ->
+          $logBlock.append '<p style="color: #C3940A">Ошибка при чтении сертификата<p>'
+
+      return chain
+    .then ->
+      unless certificatesList.length
+        return $.Deferred -> @reject 'Не найдено ни одного валидного сертификата'
+      else
+        $logBlock.append '<p>Количество валидных сертификатов ' + +certificatesList.length + '<p>'
+        selectHtml = '<p><select id="ui-certificates-select">'
+        $.each certificatesList, (index, certificate)->
+          selectHtml += '<option>' + certificate.subjectName + ' ' + certificate.validFromDate + '</option>'
+        selectHtml += '</select></p>'
+        $logBlock.append selectHtml
+
+
+
 
   .then ->
     $signBlock.show()

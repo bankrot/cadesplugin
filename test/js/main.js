@@ -36,11 +36,12 @@ init = (function(_this) {
         options: ['', 75]
       }, 'BuildVersion'));
     }).then(function(majorVersion, minorVersion, buildVersion) {
-      var certificates, installedCspVersion, store;
+      var certificates, certificatesList, installedCspVersion, store;
       installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion;
       $logBlock.append('<p>Версия CSP (' + installedCspVersion + ')<p>');
       store = null;
       certificates = null;
+      certificatesList = [];
       return altCadesPlugin.createObject('CAdESCOM.Store').then(function(_store) {
         store = _store;
         return altCadesPlugin.get(store, {
@@ -53,7 +54,63 @@ init = (function(_this) {
         certificates = _certificates;
         return altCadesPlugin.get(certificates, 'Count');
       }).then(function(count) {
-        return $logBlock.append('<p>Количество сертификатов ' + +count + '<p>');
+        var chain, j, results;
+        if (!count) {
+          store.Close();
+          return $.Deferred(function() {
+            return this.reject('Не установлено ни одного сертификата');
+          });
+        }
+        $logBlock.append('<p>Количество сертификатов ' + +count + '<p>');
+        chain = $.when();
+        $.each((function() {
+          results = [];
+          for (var j = 1; 1 <= count ? j <= count : j >= count; 1 <= count ? j++ : j--){ results.push(j); }
+          return results;
+        }).apply(this), function(i, index) {
+          return chain = chain.then(function() {
+            return altCadesPlugin.get(certificates, {
+              paramName: 'Item',
+              options: [index]
+            });
+          }).then(function(certificate) {
+            return $.when(altCadesPlugin.get(certificate, 'ValidFromDate'), altCadesPlugin.get(certificate, 'ValidToDate'), altCadesPlugin.get(certificate, {
+              paramName: 'HasPrivateKey',
+              options: []
+            }), altCadesPlugin.get(certificate, {
+              paramName: 'IsValid',
+              options: []
+            }, 'Result'), altCadesPlugin.get(certificate, 'SubjectName'));
+          }).then(function(validFromDate, validToDate, hasPrivateKey, isValid, subjectName) {
+            var date;
+            date = new Date();
+            validToDate = new Date(validToDate);
+            if (date < validToDate && hasPrivateKey && isValid) {
+              return certificatesList.push({
+                subjectName: subjectName,
+                validFromDate: validFromDate
+              });
+            }
+          }).then(null, function() {
+            return $logBlock.append('<p style="color: #C3940A">Ошибка при чтении сертификата<p>');
+          });
+        });
+        return chain;
+      }).then(function() {
+        var selectHtml;
+        if (!certificatesList.length) {
+          return $.Deferred(function() {
+            return this.reject('Не найдено ни одного валидного сертификата');
+          });
+        } else {
+          $logBlock.append('<p>Количество валидных сертификатов ' + +certificatesList.length + '<p>');
+          selectHtml = '<p><select id="ui-certificates-select">';
+          $.each(certificatesList, function(index, certificate) {
+            return selectHtml += '<option>' + certificate.subjectName + ' ' + certificate.validFromDate + '</option>';
+          });
+          selectHtml += '</select></p>';
+          return $logBlock.append(selectHtml);
+        }
       });
     }).then(function() {
       return $signBlock.show();
