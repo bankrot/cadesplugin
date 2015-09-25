@@ -1,7 +1,12 @@
+altCadesPlugin = null
+store = null # хранилище сертификатов
+certificates = null # сертификаты
+certificatesList = []
+$logBlock = null
+
 init = =>
 
   $logBlock = $ '#ui-log-block'
-  $signBlock = $ '#ui-sign-block'
 
   altCadesPlugin = new AltCadesPlugin()
 
@@ -31,9 +36,9 @@ init = =>
       $logBlock.append '<p>У вас не последняя версия плагина. Рекомендуем обновить.<p>'
 
     $.when(
-      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'MajorVersion'
-      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'MinorVersion'
-      altCadesPlugin.get 'CAdESCOM.About', {paramName: 'CSPVersion', options: ['', 75]}, 'BuildVersion'
+      altCadesPlugin.get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'MajorVersion'
+      altCadesPlugin.get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'MinorVersion'
+      altCadesPlugin.get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'BuildVersion'
     )
 
   # получение списка сертификатов
@@ -41,15 +46,10 @@ init = =>
     installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
     $logBlock.append '<p>Версия CSP (' + installedCspVersion + ')<p>'
 
-    store = null # хранилище сертификатов
-    certificates = null # сертификаты
-    #count = null # количество сертификатов
-    certificatesList = []
-
     altCadesPlugin.createObject 'CAdESCOM.Store'
     .then (_store)->
       store = _store
-      altCadesPlugin.get store, {paramName: 'Open', options: []}
+      altCadesPlugin.get store, {method: 'Open', args: []}
     .then ->
       altCadesPlugin.get store, 'Certificates'
     .then (_certificates)->
@@ -63,23 +63,28 @@ init = =>
 
       chain = $.when()
       $.each [1..count], (i, index)->
+        certificate = null
         chain = chain.then ->
-          altCadesPlugin.get certificates, {paramName: 'Item', options: [index]}
-        .then (certificate)->
+          altCadesPlugin.get certificates, {method: 'Item', args: [index]}
+        .then (certificate_)->
+          certificate = certificate_
           $.when(
             altCadesPlugin.get certificate, 'ValidFromDate'
             altCadesPlugin.get certificate, 'ValidToDate'
-            altCadesPlugin.get certificate, {paramName: 'HasPrivateKey', options: []}
-            altCadesPlugin.get certificate, {paramName: 'IsValid', options: []}, 'Result'
+            altCadesPlugin.get certificate, {method: 'HasPrivateKey', args: []}
+            altCadesPlugin.get certificate, {method: 'IsValid', args: []}, 'Result'
             altCadesPlugin.get certificate, 'SubjectName'
+            altCadesPlugin.get certificate, 'Thumbprint'
           )
-        .then (validFromDate, validToDate, hasPrivateKey, isValid, subjectName)->
+        .then (validFromDate, validToDate, hasPrivateKey, isValid, subjectName, thumbprint)->
           date = new Date()
           validToDate = new Date(validToDate)
           if date < validToDate and hasPrivateKey and isValid
             certificatesList.push
               subjectName: subjectName
               validFromDate: validFromDate
+              thumbprint: thumbprint
+              certificate: certificate
         .then null, ->
           $logBlock.append '<p style="color: #C3940A">Ошибка при чтении сертификата<p>'
 
@@ -91,17 +96,78 @@ init = =>
         $logBlock.append '<p>Количество валидных сертификатов ' + +certificatesList.length + '<p>'
         selectHtml = '<p><select id="ui-certificates-select">'
         $.each certificatesList, (index, certificate)->
-          selectHtml += '<option>' + certificate.subjectName + ' ' + certificate.validFromDate + '</option>'
+          selectHtml += '<option value="' + index + '">' + certificate.subjectName + ' ' +
+              certificate.validFromDate + '</option>'
         selectHtml += '</select></p>'
         $logBlock.append selectHtml
 
-
-
-
   .then ->
-    $signBlock.show()
+    $logBlock.append """
+      <p>
+        Введите данные которые надо подписать
+        <br>
+        <input id="ui-data-input" style="width: 500px;" value="Hello World">
+      </p>
+      <p>
+        <button type="button" id="ui-sign-button">Подписать</button>
+      </p>
+    """
+    $('#ui-sign-button').on 'click', signData
 
   .fail (message)->
-    $logBlock.append '<p style="color: #E23131">' + message + '<p>'
+    if message
+      $logBlock.append '<p style="color: #E23131">' + message + '<p>'
+
+###*
+Подписывает данные введенные в поле ввода
+@method signData
+###
+signData = ->
+  signer = null
+  attribute = null
+  attribute2 = null
+  certificateIndex = +$('#ui-certificates-select').val()
+  data = $('#ui-data-input').val()
+  signedData = null
+  unless data
+    alert 'Введите данные для подписывания'
+    return
+  $.when(
+    altCadesPlugin.createObject 'CAdESCOM.CPSigner'
+    altCadesPlugin.createObject 'CADESCOM.CPAttribute'
+  ).then (signer_, attribute_)->
+    signer = signer_
+    attribute = attribute_
+    altCadesPlugin.get attribute, {method: 'propset_Name', args: [0]}
+  .then ->
+    altCadesPlugin.get attribute, {method: 'propset_Value', args: [new Date()]}
+  .then ->
+    altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute]}
+  .then ->
+    altCadesPlugin.createObject 'CADESCOM.CPAttribute'
+  .then (attribute2_)->
+    attribute2 = attribute2_
+    altCadesPlugin.get attribute2, {method: 'propset_Name', args: [1]}
+  .then ->
+    altCadesPlugin.get attribute2, {method: 'propset_Value', args: ['Document Name']}
+  .then ->
+    altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute2]}
+  .then ->
+    altCadesPlugin.get signer, {method: 'propset_Certificate', args: [certificatesList[certificateIndex].certificate]}
+  .then ->
+    altCadesPlugin.createObject 'CAdESCOM.CadesSignedData'
+  .then (signedData_)->
+    signedData = signedData_
+    altCadesPlugin.get signedData, {method: 'propset_Content', args: [data]}
+  .then ->
+    altCadesPlugin.get signer, {method: 'propset_Options', args: [1]}
+  .then ->
+    altCadesPlugin.get signedData, {method: 'SignCades', args: [signer, 1]}
+  .then (signature)->
+    $logBlock.append '<pre>' + signature + '</pre>'
+
+  .fail (message)->
+    if message
+      $logBlock.append '<p style="color: #E23131">' + message + '<p>'
 
 $ init

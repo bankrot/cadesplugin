@@ -45,6 +45,9 @@ AltCadesPlugin = class
   @param [options.timeout] {Number} Время ожидания ответа плагина, в мс. По умолчанию 20000
   ###
   constructor: (options = {})->
+    if window.altCadespluginApiInstance
+      return window.altCadespluginApiInstance
+
     if options.timeout
       @timeout = options.timeout
 
@@ -53,6 +56,8 @@ AltCadesPlugin = class
     @cadesplugin.set = (object)=>
       @pluginObject = object
     window.cadesplugin = @cadesplugin
+
+    window.altCadespluginApiInstance = @
 
   ###*
   Необходимый метод, его вызывает скрипт плагина
@@ -80,6 +85,9 @@ AltCadesPlugin = class
   @return {jQuery.Deferred} Deferred объект
   ###
   nonNpapiInit: =>
+    if @checked
+      return $.when()
+
     # подключаем файл из плагина
     $('head').append '<script src="chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js"></script>'
 
@@ -135,14 +143,14 @@ AltCadesPlugin = class
   @method getParam
   @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
   @param paramName {Object|String} Имя параметра.
-    Или объект с ключами paramName и options на случай если параметр нужно получить через выполнение функции
+    Или объект с ключами method и args на случай если параметр нужно получить через выполнение функции
   @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
   ###
   getParam: (objectName, paramName)=>
 
     param = (_object, _param)->
       if typeof _param is 'object'
-        return _object[_param.paramName].apply null, _param.options
+        return _object[_param.method].apply null, _param.args
       else
         p = _object[_param]
         return p

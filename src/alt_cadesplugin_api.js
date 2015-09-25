@@ -74,6 +74,9 @@ AltCadesPlugin = (function() {
     this.getParam = bind(this.getParam, this);
     this.createObject = bind(this.createObject, this);
     this.nonNpapiInit = bind(this.nonNpapiInit, this);
+    if (window.altCadespluginApiInstance) {
+      return window.altCadespluginApiInstance;
+    }
     if (options.timeout) {
       this.timeout = options.timeout;
     }
@@ -85,6 +88,7 @@ AltCadesPlugin = (function() {
       };
     })(this);
     window.cadesplugin = this.cadesplugin;
+    window.altCadespluginApiInstance = this;
   }
 
 
@@ -125,6 +129,9 @@ AltCadesPlugin = (function() {
 
   _Class.prototype.nonNpapiInit = function() {
     var deferred, fail, listener, success;
+    if (this.checked) {
+      return $.when();
+    }
     $('head').append('<script src="chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js"></script>');
     deferred = $.Deferred();
     window.postMessage('cadesplugin_echo_request', '*');
@@ -184,7 +191,7 @@ AltCadesPlugin = (function() {
   @method getParam
   @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
   @param paramName {Object|String} Имя параметра.
-    Или объект с ключами paramName и options на случай если параметр нужно получить через выполнение функции
+    Или объект с ключами method и args на случай если параметр нужно получить через выполнение функции
   @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
    */
 
@@ -193,7 +200,7 @@ AltCadesPlugin = (function() {
     param = function(_object, _param) {
       var p;
       if (typeof _param === 'object') {
-        return _object[_param.paramName].apply(null, _param.options);
+        return _object[_param.method].apply(null, _param.args);
       } else {
         p = _object[_param];
         return p;
