@@ -46,7 +46,7 @@ init = =>
     installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion
     $logBlock.append '<p>Версия CSP (' + installedCspVersion + ')<p>'
 
-    altCadesPlugin.createObject 'CAdESCOM.Store'
+    altCadesPlugin.get 'CAdESCOM.Store'
     .then (_store)->
       store = _store
       altCadesPlugin.get store, {method: 'Open', args: []}
@@ -133,8 +133,8 @@ signData = ->
     alert 'Введите данные для подписывания'
     return
   $.when(
-    altCadesPlugin.createObject 'CAdESCOM.CPSigner'
-    altCadesPlugin.createObject 'CADESCOM.CPAttribute'
+    altCadesPlugin.get 'CAdESCOM.CPSigner'
+    altCadesPlugin.get 'CADESCOM.CPAttribute'
   ).then (signer_, attribute_)->
     signer = signer_
     attribute = attribute_
@@ -144,7 +144,7 @@ signData = ->
   .then ->
     altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute]}
   .then ->
-    altCadesPlugin.createObject 'CADESCOM.CPAttribute'
+    altCadesPlugin.get 'CADESCOM.CPAttribute'
   .then (attribute2_)->
     attribute2 = attribute2_
     altCadesPlugin.get attribute2, {method: 'propset_Name', args: [1]}
@@ -155,7 +155,7 @@ signData = ->
   .then ->
     altCadesPlugin.get signer, {method: 'propset_Certificate', args: [certificatesList[certificateIndex].certificate]}
   .then ->
-    altCadesPlugin.createObject 'CAdESCOM.CadesSignedData'
+    altCadesPlugin.get 'CAdESCOM.CadesSignedData'
   .then (signedData_)->
     signedData = signedData_
     altCadesPlugin.get signedData, {method: 'propset_Content', args: [data]}

@@ -48,7 +48,7 @@ init = (function(_this) {
       var installedCspVersion;
       installedCspVersion = majorVersion + '.' + minorVersion + '.' + buildVersion;
       $logBlock.append('<p>Версия CSP (' + installedCspVersion + ')<p>');
-      return altCadesPlugin.createObject('CAdESCOM.Store').then(function(_store) {
+      return altCadesPlugin.get('CAdESCOM.Store').then(function(_store) {
         store = _store;
         return altCadesPlugin.get(store, {
           method: 'Open',
@@ -152,7 +152,7 @@ signData = function() {
     alert('Введите данные для подписывания');
     return;
   }
-  return $.when(altCadesPlugin.createObject('CAdESCOM.CPSigner'), altCadesPlugin.createObject('CADESCOM.CPAttribute')).then(function(signer_, attribute_) {
+  return $.when(altCadesPlugin.get('CAdESCOM.CPSigner'), altCadesPlugin.get('CADESCOM.CPAttribute')).then(function(signer_, attribute_) {
     signer = signer_;
     attribute = attribute_;
     return altCadesPlugin.get(attribute, {
@@ -170,7 +170,7 @@ signData = function() {
       args: [attribute]
     });
   }).then(function() {
-    return altCadesPlugin.createObject('CADESCOM.CPAttribute');
+    return altCadesPlugin.get('CADESCOM.CPAttribute');
   }).then(function(attribute2_) {
     attribute2 = attribute2_;
     return altCadesPlugin.get(attribute2, {
@@ -193,7 +193,7 @@ signData = function() {
       args: [certificatesList[certificateIndex].certificate]
     });
   }).then(function() {
-    return altCadesPlugin.createObject('CAdESCOM.CadesSignedData');
+    return altCadesPlugin.get('CAdESCOM.CadesSignedData');
   }).then(function(signedData_) {
     signedData = signedData_;
     return altCadesPlugin.get(signedData, {

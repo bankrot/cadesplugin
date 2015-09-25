@@ -72,7 +72,6 @@ AltCadesPlugin = (function() {
     }
     this.get = bind(this.get, this);
     this.getParam = bind(this.getParam, this);
-    this.createObject = bind(this.createObject, this);
     this.nonNpapiInit = bind(this.nonNpapiInit, this);
     if (window.altCadespluginApiInstance) {
       return window.altCadespluginApiInstance;
@@ -168,25 +167,6 @@ AltCadesPlugin = (function() {
 
 
   /**
-  Создает объект плагина по названию
-  @method createObject
-  @param name {String} Название объекта
-  @return {jQuery.Deferred} Deferred объект с разультатом выполнения в качестве аргумента колбэка
-   */
-
-  _Class.prototype.createObject = function(name) {
-    var deferred;
-    deferred = $.Deferred();
-    this.pluginObject.CreateObjectAsync(name).then(function(value) {
-      return deferred.resolve(value);
-    }, function(value) {
-      return deferred.reject(value);
-    });
-    return deferred;
-  };
-
-
-  /**
   Возвращает параметр из объекта
   @method getParam
   @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
@@ -209,7 +189,11 @@ AltCadesPlugin = (function() {
     deferred = $.Deferred();
     if (typeof objectName === 'string') {
       chain = this.pluginObject.CreateObjectAsync(objectName).then(function(object) {
-        return param(object, paramName);
+        if (paramName) {
+          return param(object, paramName);
+        } else {
+          return object;
+        }
       });
     } else {
       chain = param(objectName, paramName);
