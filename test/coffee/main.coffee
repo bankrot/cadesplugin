@@ -12,8 +12,8 @@ init = =>
 
   # проверка наличия плагина
   $logBlock.append '<h3>Проверка наличия плагина<h4>'
-  if bowser.chrome and bowser.version >= 40
-    deferred = altCadesPlugin.nonNpapiInit()
+  if bowser.chrome or bowser.firefox
+    deferred = altCadesPlugin.init()
   else
     deferred = $.Deferred -> @reject 'Браузер не поддерживается'
 
@@ -134,33 +134,33 @@ signData = ->
     return
   $.when(
     altCadesPlugin.get 'CAdESCOM.CPSigner'
-    altCadesPlugin.get 'CADESCOM.CPAttribute'
+    altCadesPlugin.get 'CAdESCOM.CPAttribute'
   ).then (signer_, attribute_)->
     signer = signer_
     attribute = attribute_
-    altCadesPlugin.get attribute, {method: 'propset_Name', args: [0]}
+    altCadesPlugin.set attribute, 'Name', 0
   .then ->
-    altCadesPlugin.get attribute, {method: 'propset_Value', args: [new Date()]}
+    altCadesPlugin.set attribute, 'Value', new Date()
   .then ->
     altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute]}
   .then ->
     altCadesPlugin.get 'CADESCOM.CPAttribute'
   .then (attribute2_)->
     attribute2 = attribute2_
-    altCadesPlugin.get attribute2, {method: 'propset_Name', args: [1]}
+    altCadesPlugin.set attribute2, 'Name', 1
   .then ->
-    altCadesPlugin.get attribute2, {method: 'propset_Value', args: ['Document Name']}
+    altCadesPlugin.set attribute2, 'Value', 'Document Name'
   .then ->
     altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute2]}
   .then ->
-    altCadesPlugin.get signer, {method: 'propset_Certificate', args: [certificatesList[certificateIndex].certificate]}
+    altCadesPlugin.set signer, 'Certificate', certificatesList[certificateIndex].certificate
   .then ->
     altCadesPlugin.get 'CAdESCOM.CadesSignedData'
   .then (signedData_)->
     signedData = signedData_
-    altCadesPlugin.get signedData, {method: 'propset_Content', args: [data]}
+    altCadesPlugin.set signedData, 'Content', data
   .then ->
-    altCadesPlugin.get signer, {method: 'propset_Options', args: [1]}
+    altCadesPlugin.set signer, 'Options', 1
   .then ->
     altCadesPlugin.get signedData, {method: 'SignCades', args: [signer, 1]}
   .then (signature)->

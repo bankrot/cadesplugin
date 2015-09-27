@@ -16,8 +16,8 @@ init = (function(_this) {
     $logBlock = $('#ui-log-block');
     altCadesPlugin = new AltCadesPlugin();
     $logBlock.append('<h3>Проверка наличия плагина<h4>');
-    if (bowser.chrome && bowser.version >= 40) {
-      deferred = altCadesPlugin.nonNpapiInit();
+    if (bowser.chrome || bowser.firefox) {
+      deferred = altCadesPlugin.init();
     } else {
       deferred = $.Deferred(function() {
         return this.reject('Браузер не поддерживается');
@@ -152,18 +152,12 @@ signData = function() {
     alert('Введите данные для подписывания');
     return;
   }
-  return $.when(altCadesPlugin.get('CAdESCOM.CPSigner'), altCadesPlugin.get('CADESCOM.CPAttribute')).then(function(signer_, attribute_) {
+  return $.when(altCadesPlugin.get('CAdESCOM.CPSigner'), altCadesPlugin.get('CAdESCOM.CPAttribute')).then(function(signer_, attribute_) {
     signer = signer_;
     attribute = attribute_;
-    return altCadesPlugin.get(attribute, {
-      method: 'propset_Name',
-      args: [0]
-    });
+    return altCadesPlugin.set(attribute, 'Name', 0);
   }).then(function() {
-    return altCadesPlugin.get(attribute, {
-      method: 'propset_Value',
-      args: [new Date()]
-    });
+    return altCadesPlugin.set(attribute, 'Value', new Date());
   }).then(function() {
     return altCadesPlugin.get(signer, 'AuthenticatedAttributes2', {
       method: 'Add',
@@ -173,38 +167,23 @@ signData = function() {
     return altCadesPlugin.get('CADESCOM.CPAttribute');
   }).then(function(attribute2_) {
     attribute2 = attribute2_;
-    return altCadesPlugin.get(attribute2, {
-      method: 'propset_Name',
-      args: [1]
-    });
+    return altCadesPlugin.set(attribute2, 'Name', 1);
   }).then(function() {
-    return altCadesPlugin.get(attribute2, {
-      method: 'propset_Value',
-      args: ['Document Name']
-    });
+    return altCadesPlugin.set(attribute2, 'Value', 'Document Name');
   }).then(function() {
     return altCadesPlugin.get(signer, 'AuthenticatedAttributes2', {
       method: 'Add',
       args: [attribute2]
     });
   }).then(function() {
-    return altCadesPlugin.get(signer, {
-      method: 'propset_Certificate',
-      args: [certificatesList[certificateIndex].certificate]
-    });
+    return altCadesPlugin.set(signer, 'Certificate', certificatesList[certificateIndex].certificate);
   }).then(function() {
     return altCadesPlugin.get('CAdESCOM.CadesSignedData');
   }).then(function(signedData_) {
     signedData = signedData_;
-    return altCadesPlugin.get(signedData, {
-      method: 'propset_Content',
-      args: [data]
-    });
+    return altCadesPlugin.set(signedData, 'Content', data);
   }).then(function() {
-    return altCadesPlugin.get(signer, {
-      method: 'propset_Options',
-      args: [1]
-    });
+    return altCadesPlugin.set(signer, 'Options', 1);
   }).then(function() {
     return altCadesPlugin.get(signedData, {
       method: 'SignCades',

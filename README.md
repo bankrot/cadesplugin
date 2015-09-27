@@ -1,4 +1,4 @@
-# Cadesplugin (В разработке, не для продакшна)
+# Cadesplugin (beta)
 
 ### Альтернативная библиотека для работы с [браузерным плагином от КриптоПРО](https://www.cryptopro.ru/sites/default/files/products/cades/demopage/main.html).
 
@@ -32,11 +32,11 @@ src/alt_cadesplugin_api.min.js
 
 #### Зависимости
 
-Для корректной работы скрипта нужна библиотека jQuery
+Для корректной работы скрипта необходима библиотека jQuery
 
 #### Использование
 
-Для начала надо создать экземпляр класса AltCadesPlugin
+Для начала создаем экземпляр класса AltCadesPlugin
 
     var altCadesPlugin;
     altCadesPlugin = new AltCadesPlugin()
@@ -83,6 +83,17 @@ src/alt_cadesplugin_api.min.js
         altCadesPlugin.get(attribute, {method: 'propset_Name', args: [0]});
     }).then(function(){
         altCadesPlugin.get(attribute, {method: 'propset_Value', args: [timeNow]});
+    });
+
+#### Запись данных
+
+Запишет значение 0 в параметр Name объекта CAdESCOM.CPAttribute
+
+Если плагин работает без NPAPI то не надо заботиться о подставлении префикса propset_, это делается автоматически
+
+    altCadesPlugin.get('CAdESCOM.CPAttribute')
+    .then(function(attribute){
+        altCadesPlugin.set(attribute, 'Name', 0);
     });
 
 ## Как запустить тестовый сервер для проверки

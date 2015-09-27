@@ -10,11 +10,11 @@
 
 /**
 Библиотека для работы с плагином КриптоПРО
-Версия 0.0.1 (в разработке)
+Версия 0.0.5 (beta)
 Поддерживает плагин версии 2.0.12245
 Репозиторий https://github.com/bankrot/cadesplugin
  */
-var $, AltCadesPlugin,
+var $, AltCadesPlugin, altCadespluginApiInstance,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   slice = [].slice;
 
@@ -22,10 +22,24 @@ if (jquery && !$) {
   $ = jquery;
 }
 
+
+/**
+Хранилизе для инстанса
+@property altCadespluginApiInstance
+@type {AltCadesPlugin}
+ */
+
+altCadespluginApiInstance = null;
+
+
+/**
+@class AltCadesPlugin
+ */
+
 AltCadesPlugin = (function() {
 
   /**
-  Если TRUE значит плагин уже был проверен
+  Если TRUE значит плагин уже был проверен (но не факт что удачно)
   @property checked
   @type {Boolean}
   @default false
@@ -51,12 +65,32 @@ AltCadesPlugin = (function() {
 
 
   /**
-  Время ожидания ответа от плагина
+  Время ожидания ответа от плагина (для версии без NPAPI)
   @property timeout
   @type {Number}
    */
 
   _Class.prototype.timeout = 20000;
+
+
+  /**
+  Нативные промисы поддерживаются
+  @property isPromise
+  @type {Boolean}
+   */
+
+  _Class.prototype.isPromise = !!window.Promise;
+
+
+  /**
+  На основе webkit
+  @property isWebkit
+  @type {Boolean}
+   */
+
+  _Class.prototype.isWebkit = (function() {
+    return navigator.userAgent.match(/chrome/i) || navigator.userAgent.match(/opera/i);
+  })();
 
 
   /**
@@ -70,11 +104,12 @@ AltCadesPlugin = (function() {
     if (options == null) {
       options = {};
     }
+    this.set = bind(this.set, this);
     this.get = bind(this.get, this);
     this.getParam = bind(this.getParam, this);
-    this.nonNpapiInit = bind(this.nonNpapiInit, this);
-    if (window.altCadespluginApiInstance) {
-      return window.altCadespluginApiInstance;
+    this.init = bind(this.init, this);
+    if (altCadespluginApiInstance) {
+      return altCadespluginApiInstance;
     }
     if (options.timeout) {
       this.timeout = options.timeout;
@@ -87,7 +122,7 @@ AltCadesPlugin = (function() {
       };
     })(this);
     window.cadesplugin = this.cadesplugin;
-    window.altCadespluginApiInstance = this;
+    altCadespluginApiInstance = this;
   }
 
 
@@ -100,11 +135,11 @@ AltCadesPlugin = (function() {
   _Class.prototype.asyncSpawn = function(generatorFunc) {
     var continuer, generator, onFulfilled, onRejected;
     continuer = function(verb, arg) {
-      var err, error, result;
+      var err, error1, result;
       try {
         result = generator[verb](arg);
-      } catch (error) {
-        err = error;
+      } catch (error1) {
+        err = error1;
         return Promise.reject(err);
       }
       if (result.done) {
@@ -122,38 +157,52 @@ AltCadesPlugin = (function() {
 
   /**
   Инициализирует работу плагина в браузере без NPAPI (Например Google Chrome)
-  @method nonNpapiInit
+  @method init
   @return {jQuery.Deferred} Deferred объект
    */
 
-  _Class.prototype.nonNpapiInit = function() {
-    var deferred, fail, listener, success;
+  _Class.prototype.init = function() {
     if (this.checked) {
       return $.when();
     }
-    $('head').append('<script src="chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js"></script>');
-    deferred = $.Deferred();
+    if (this.isWebkit) {
+      return this.initWebkit();
+    } else {
+      return this.initNpapi();
+    }
+  };
+
+
+  /**
+  Инициализирует плагин в webkit-браузерах
+  @method initWebkit
+   */
+
+  _Class.prototype.initWebkit = function() {
+    var deferred, listener;
+    $.getScript('chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js');
     window.postMessage('cadesplugin_echo_request', '*');
-    success = (function(_this) {
-      return function() {
-        _this.checked = true;
-        return deferred.resolve();
+    deferred = $.Deferred();
+    listener = (function(_this) {
+      return function(event) {
+        if (event.data !== 'cadesplugin_loaded') {
+          return;
+        }
+        return setTimeout((function() {
+          return cpcsp_chrome_nmcades.check_chrome_plugin(((function(_this) {
+            return function() {
+              _this.checked = true;
+              return deferred.resolve();
+            };
+          })(this)), ((function(_this) {
+            return function(message) {
+              _this.checked = true;
+              return deferred.reject(message);
+            };
+          })(this)));
+        }), 0);
       };
     })(this);
-    fail = (function(_this) {
-      return function(message) {
-        _this.checked = true;
-        return deferred.reject(message);
-      };
-    })(this);
-    listener = function(event) {
-      if (event.data !== 'cadesplugin_loaded') {
-        return;
-      }
-      return setTimeout((function() {
-        return cpcsp_chrome_nmcades.check_chrome_plugin(success, fail);
-      }), 0);
-    };
     window.addEventListener('message', listener, false);
     setTimeout(((function(_this) {
       return function() {
@@ -167,6 +216,83 @@ AltCadesPlugin = (function() {
 
 
   /**
+  Инициализирует плагин в режиме NPAPI
+  @method initNpapi
+   */
+
+  _Class.prototype.initNpapi = function() {
+    var deferred, eventName;
+    deferred = $.Deferred();
+    if (this.isPromise) {
+      eventName = 'load';
+    } else {
+      eventName = 'message';
+    }
+    $(window).on(eventName, (function(_this) {
+      return function(event) {
+        var result;
+        if ((!_this.isPromise) && (event.data !== 'cadesplugin_echo_request')) {
+          return;
+        }
+        _this.loadNpapiPlugin();
+        _this.checked = true;
+        result = _this.checkNpapiPlugin();
+        if (result === true) {
+          return deferred.resolve();
+        } else {
+          return deferred.reject(result);
+        }
+      };
+    })(this));
+    return deferred;
+  };
+
+
+  /**
+  Загружает NPAPI плагин
+  @method loadNpapiPlugin
+   */
+
+  _Class.prototype.loadNpapiPlugin = function() {
+    var object;
+    object = $('<object id="cadesplugin_object" type="application/x-cades" style="visibility:hidden;"></object>');
+    $('body').append(object);
+    return this.pluginObject = object[0];
+  };
+
+
+  /**
+  Проверяет плагин и возвращает true если проверка пройдена или строку с кодом ошибки
+  @method checkNpapiPlugin
+   */
+
+  _Class.prototype.checkNpapiPlugin = function() {
+    var error, error1, mimetype, plugin;
+    try {
+      this.createObject('CAdESCOM.About');
+      return true;
+    } catch (error1) {
+      error = error1;
+      mimetype = navigator.mimeTypes['application/x-cades'];
+      if (mimetype) {
+        plugin = mimetype.enabledPlugin;
+        if (plugin) {
+          return 'plugin_not_loaded_but_object_cannot_create';
+        } else {
+          return 'error_on_plugin_load';
+        }
+      } else {
+        return 'plugin_unreachable';
+      }
+    }
+  };
+
+  _Class.prototype.createObject = function(name) {
+    return this.pluginObject.CreateObject(name);
+  };
+
+
+  /**
   Возвращает параметр из объекта
   @method getParam
   @param objectName {Object|String} Уже созданный объект, или ранее полученный параметр, или название объекта
@@ -176,34 +302,55 @@ AltCadesPlugin = (function() {
    */
 
   _Class.prototype.getParam = function(objectName, paramName) {
-    var chain, deferred, param;
-    param = function(_object, _param) {
-      var p;
-      if (typeof _param === 'object') {
-        return _object[_param.method].apply(null, _param.args);
-      } else {
-        p = _object[_param];
-        return p;
-      }
-    };
+    var deferred, error, error1, nativePromiseChain, result;
     deferred = $.Deferred();
-    if (typeof objectName === 'string') {
-      chain = this.pluginObject.CreateObjectAsync(objectName).then(function(object) {
-        if (paramName) {
-          return param(object, paramName);
-        } else {
-          return object;
-        }
-      });
+    if (this.isWebkit) {
+      if (typeof objectName === 'string') {
+        nativePromiseChain = this.pluginObject.CreateObjectAsync(objectName).then((function(_this) {
+          return function(object) {
+            if (paramName) {
+              return _this.extractParam(object, paramName);
+            } else {
+              return object;
+            }
+          };
+        })(this));
+      } else {
+        nativePromiseChain = this.extractParam(objectName, paramName);
+      }
+      nativePromiseChain.then(deferred.resolve, deferred.reject);
     } else {
-      chain = param(objectName, paramName);
+      try {
+        if (typeof objectName === 'string') {
+          result = this.pluginObject.CreateObject(objectName);
+          if (paramName) {
+            result = this.extractParam(result, paramName);
+          }
+        } else {
+          result = this.extractParam(objectName, paramName);
+        }
+        deferred.resolve(result);
+      } catch (error1) {
+        error = error1;
+        deferred.reject(error.message);
+      }
     }
-    chain.then(function(value) {
-      return deferred.resolve(value);
-    }, function(value) {
-      return deferred.reject(value);
-    });
     return deferred;
+  };
+
+
+  /**
+  @method extractParam
+  @param object
+  @param paramName
+   */
+
+  _Class.prototype.extractParam = function(object, param) {
+    if (typeof param === 'object') {
+      return object[param.method].apply(object, param.args);
+    } else {
+      return object[param];
+    }
   };
 
 
@@ -229,6 +376,37 @@ AltCadesPlugin = (function() {
         }
       };
     })(this));
+  };
+
+
+  /**
+  Записывает данные в передаваемый объект
+  Если плагин работает без NPAPI, то параметр записывается через метод propset_ParamName
+  @method set
+  @param object {Object} Объект плагина куда надо записать данные
+  @param paramName {String} Название записываемого параметра
+  @param value Значение параметра
+   */
+
+  _Class.prototype.set = function(object, paramName, value) {
+    var deferred, error, error1, param;
+    if (this.isWebkit) {
+      param = {
+        method: 'propset_' + paramName,
+        args: [value]
+      };
+      return this.get(object, param);
+    } else {
+      deferred = $.Deferred();
+      try {
+        object[paramName] = value;
+        deferred.resolve();
+      } catch (error1) {
+        error = error1;
+        deferred.reject(error.message);
+      }
+      return deferred;
+    }
   };
 
   return _Class;
