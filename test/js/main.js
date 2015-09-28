@@ -15,8 +15,8 @@ init = (function(_this) {
     var deferred;
     $logBlock = $('#ui-log-block');
     altCadesPlugin = new AltCadesPlugin();
-    $logBlock.append('<h3>Проверка наличия плагина<h4>');
-    if (bowser.chrome || bowser.firefox) {
+    $logBlock.append('<h3>Проверка наличия плагина<h3>');
+    if (bowser.chrome || bowser.firefox || bowser.msie) {
       deferred = altCadesPlugin.init();
     } else {
       deferred = $.Deferred(function() {
@@ -154,23 +154,44 @@ signData = function() {
   }
   return $.when(altCadesPlugin.get('CAdESCOM.CPSigner'), altCadesPlugin.get('CAdESCOM.CPAttribute')).then(function(signer_, attribute_) {
     signer = signer_;
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     attribute = attribute_;
     return altCadesPlugin.set(attribute, 'Name', 0);
   }).then(function() {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     return altCadesPlugin.set(attribute, 'Value', new Date());
   }).then(function() {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     return altCadesPlugin.get(signer, 'AuthenticatedAttributes2', {
       method: 'Add',
       args: [attribute]
     });
   }).then(function() {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     return altCadesPlugin.get('CADESCOM.CPAttribute');
   }).then(function(attribute2_) {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     attribute2 = attribute2_;
     return altCadesPlugin.set(attribute2, 'Name', 1);
   }).then(function() {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     return altCadesPlugin.set(attribute2, 'Value', 'Document Name');
   }).then(function() {
+    if (!altCadesPlugin.isWebkit) {
+      return;
+    }
     return altCadesPlugin.get(signer, 'AuthenticatedAttributes2', {
       method: 'Add',
       args: [attribute2]

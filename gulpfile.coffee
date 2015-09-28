@@ -51,7 +51,11 @@ gulp.task 'main', (callback)->
 
 # копирует jquery из node_modules
 gulp.task 'libs', (callback)->
-  gulp.src ['./node_modules/jquery/dist/jquery.js', './node_modules/bowser/src/bowser.js']
+  gulp.src [
+    './node_modules/jquery/dist/jquery.js'
+    './node_modules/bowser/src/bowser.js'
+    './node_modules/es6-promise/dist/es6-promise.js'
+  ]
   .pipe gulp.dest './test/js'
 
 # запускает вебсервер для тестирования

@@ -32,7 +32,10 @@ src/alt_cadesplugin_api.min.js
 
 #### Зависимости
 
-Для корректной работы скрипта необходима библиотека jQuery
+Для корректной работы скрипта необходимы следующие библиотеки
+
+1. [jQuery](https://github.com/jquery/jquery)
+2. [es6-promise](https://github.com/jakearchibald/es6-promise)
 
 #### Использование
 

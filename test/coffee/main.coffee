@@ -11,8 +11,8 @@ init = =>
   altCadesPlugin = new AltCadesPlugin()
 
   # проверка наличия плагина
-  $logBlock.append '<h3>Проверка наличия плагина<h4>'
-  if bowser.chrome or bowser.firefox
+  $logBlock.append '<h3>Проверка наличия плагина<h3>'
+  if bowser.chrome or bowser.firefox or bowser.msie
     deferred = altCadesPlugin.init()
   else
     deferred = $.Deferred -> @reject 'Браузер не поддерживается'
@@ -137,20 +137,34 @@ signData = ->
     altCadesPlugin.get 'CAdESCOM.CPAttribute'
   ).then (signer_, attribute_)->
     signer = signer_
+    unless altCadesPlugin.isWebkit
+      return
     attribute = attribute_
     altCadesPlugin.set attribute, 'Name', 0
   .then ->
+    unless altCadesPlugin.isWebkit
+      return
     altCadesPlugin.set attribute, 'Value', new Date()
   .then ->
+    unless altCadesPlugin.isWebkit
+      return
     altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute]}
   .then ->
+    unless altCadesPlugin.isWebkit
+      return
     altCadesPlugin.get 'CADESCOM.CPAttribute'
   .then (attribute2_)->
+    unless altCadesPlugin.isWebkit
+      return
     attribute2 = attribute2_
     altCadesPlugin.set attribute2, 'Name', 1
   .then ->
+    unless altCadesPlugin.isWebkit
+      return
     altCadesPlugin.set attribute2, 'Value', 'Document Name'
   .then ->
+    unless altCadesPlugin.isWebkit
+      return
     altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute2]}
   .then ->
     altCadesPlugin.set signer, 'Certificate', certificatesList[certificateIndex].certificate

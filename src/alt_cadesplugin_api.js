@@ -10,7 +10,7 @@
 
 /**
 Библиотека для работы с плагином КриптоПРО
-Версия 0.0.5 (beta)
+Версия 0.0.6 (beta)
 Поддерживает плагин версии 2.0.12245
 Репозиторий https://github.com/bankrot/cadesplugin
  */
@@ -74,15 +74,6 @@ AltCadesPlugin = (function() {
 
 
   /**
-  Нативные промисы поддерживаются
-  @property isPromise
-  @type {Boolean}
-   */
-
-  _Class.prototype.isPromise = !!window.Promise;
-
-
-  /**
   На основе webkit
   @property isWebkit
   @type {Boolean}
@@ -90,6 +81,17 @@ AltCadesPlugin = (function() {
 
   _Class.prototype.isWebkit = (function() {
     return navigator.userAgent.match(/chrome/i) || navigator.userAgent.match(/opera/i);
+  })();
+
+
+  /**
+  Internet Explorer
+  @property isIE
+  @type {Boolean}
+   */
+
+  _Class.prototype.isIE = (function() {
+    return (navigator.appName === 'Microsoft Internet Explorer') || navigator.userAgent.match(/Trident\/./i);
   })();
 
 
@@ -179,13 +181,14 @@ AltCadesPlugin = (function() {
    */
 
   _Class.prototype.initWebkit = function() {
-    var deferred, listener;
+    var deferred;
     $.getScript('chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js');
     window.postMessage('cadesplugin_echo_request', '*');
     deferred = $.Deferred();
-    listener = (function(_this) {
+    $(window).on('message', (function(_this) {
       return function(event) {
-        if (event.data !== 'cadesplugin_loaded') {
+        var ref;
+        if ((event != null ? (ref = event.originalEvent) != null ? ref.data : void 0 : void 0) !== 'cadesplugin_loaded') {
           return;
         }
         return setTimeout((function() {
@@ -202,8 +205,7 @@ AltCadesPlugin = (function() {
           })(this)));
         }), 0);
       };
-    })(this);
-    window.addEventListener('message', listener, false);
+    })(this));
     setTimeout(((function(_this) {
       return function() {
         if (!_this.checked) {
@@ -221,19 +223,11 @@ AltCadesPlugin = (function() {
    */
 
   _Class.prototype.initNpapi = function() {
-    var deferred, eventName;
+    var deferred;
     deferred = $.Deferred();
-    if (this.isPromise) {
-      eventName = 'load';
-    } else {
-      eventName = 'message';
-    }
-    $(window).on(eventName, (function(_this) {
+    $(window).on('load', (function(_this) {
       return function(event) {
         var result;
-        if ((!_this.isPromise) && (event.data !== 'cadesplugin_echo_request')) {
-          return;
-        }
         _this.loadNpapiPlugin();
         _this.checked = true;
         result = _this.checkNpapiPlugin();
@@ -254,10 +248,14 @@ AltCadesPlugin = (function() {
    */
 
   _Class.prototype.loadNpapiPlugin = function() {
-    var object;
+    var ieObject, object;
     object = $('<object id="cadesplugin_object" type="application/x-cades" style="visibility:hidden;"></object>');
     $('body').append(object);
-    return this.pluginObject = object[0];
+    this.pluginObject = object[0];
+    if (this.isIE) {
+      ieObject = $('<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility=hidden"></object>');
+      return $('body').append(ieObject);
+    }
   };
 
 
@@ -288,6 +286,18 @@ AltCadesPlugin = (function() {
   };
 
   _Class.prototype.createObject = function(name) {
+    var error, error1;
+    if (this.isIE) {
+      if (name.match(/X509Enrollment/i)) {
+        try {
+          return $('certEnrollClassFactory')[0].CreateObject(name);
+        } catch (error1) {
+          error = error1;
+          throw 'setup_https_for_x509enrollment';
+        }
+      }
+      return new ActiveXObject(name);
+    }
     return this.pluginObject.CreateObject(name);
   };
 
@@ -322,7 +332,7 @@ AltCadesPlugin = (function() {
     } else {
       try {
         if (typeof objectName === 'string') {
-          result = this.pluginObject.CreateObject(objectName);
+          result = this.createObject(objectName);
           if (paramName) {
             result = this.extractParam(result, paramName);
           }
@@ -347,7 +357,18 @@ AltCadesPlugin = (function() {
 
   _Class.prototype.extractParam = function(object, param) {
     if (typeof param === 'object') {
-      return object[param.method].apply(object, param.args);
+      switch (param.args.length) {
+        case 0:
+          return object[param.method]();
+        case 1:
+          return object[param.method](param.args[0]);
+        case 2:
+          return object[param.method](param.args[0], param.args[1]);
+        case 3:
+          return object[param.method](param.args[0], param.args[1], param.args[2]);
+        case 4:
+          return object[param.method](param.args[0], param.args[1], param.args[2], param.args[3]);
+      }
     } else {
       return object[param];
     }

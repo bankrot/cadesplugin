@@ -1,6 +1,6 @@
 ###*
 Библиотека для работы с плагином КриптоПРО
-Версия 0.0.5 (beta)
+Версия 0.0.6 (beta)
 Поддерживает плагин версии 2.0.12245
 Репозиторий https://github.com/bankrot/cadesplugin
 ###
@@ -49,19 +49,20 @@ AltCadesPlugin = class
   timeout: 20000
 
   ###*
-  Нативные промисы поддерживаются
-  @property isPromise
-  @type {Boolean}
-  ###
-  isPromise: not not window.Promise
-
-  ###*
   На основе webkit
   @property isWebkit
   @type {Boolean}
   ###
   isWebkit: do ->
     return navigator.userAgent.match(/chrome/i) or navigator.userAgent.match(/opera/i)
+
+  ###*
+  Internet Explorer
+  @property isIE
+  @type {Boolean}
+  ###
+  isIE: do ->
+    return (navigator.appName is 'Microsoft Internet Explorer') or navigator.userAgent.match(/Trident\/./i)
 
   ###*
   Конструктор
@@ -132,8 +133,8 @@ AltCadesPlugin = class
     deferred = $.Deferred()
 
     # обработчик события по загрузке плагина
-    listener = (event)=>
-      if event.data isnt 'cadesplugin_loaded'
+    $(window).on 'message', (event)=>
+      if event?.originalEvent?.data isnt 'cadesplugin_loaded'
         return
       setTimeout (->
         cpcsp_chrome_nmcades.check_chrome_plugin (=>
@@ -144,7 +145,6 @@ AltCadesPlugin = class
           deferred.reject message
         )
       ), 0
-    window.addEventListener 'message', listener, false
 
     # если через @timeout мс плагин все еще не вернул ответ, значит ошибка
     setTimeout (=>
@@ -160,13 +160,7 @@ AltCadesPlugin = class
   ###
   initNpapi: ->
     deferred = $.Deferred()
-    if @isPromise
-      eventName = 'load'
-    else
-      eventName = 'message'
-    $(window).on eventName, (event)=>
-      if (not @isPromise) and (event.data isnt 'cadesplugin_echo_request')
-        return
+    $(window).on 'load', (event)=>
       @loadNpapiPlugin()
       @checked = true
       result = @checkNpapiPlugin()
@@ -184,14 +178,10 @@ AltCadesPlugin = class
     object = $ '<object id="cadesplugin_object" type="application/x-cades" style="visibility:hidden;"></object>'
     $('body').append object
     @pluginObject = object[0]
-    #if(isIE())
-    #{
-    #var elem1 = document.createElement('object');
-    #elem1.setAttribute("id", "certEnrollClassFactory");
-    #elem1.setAttribute("classid", "clsid:884e2049-217d-11da-b2a4-000e7bbb2b09");
-    #elem1.setAttribute("style", "visibility=hidden");
-    #document.getElementsByTagName("body")[0].appendChild(elem1);
-    #}
+
+    if @isIE
+      ieObject = $ '<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility=hidden"></object>'
+      $('body').append ieObject
 
   ###*
   Проверяет плагин и возвращает true если проверка пройдена или строку с кодом ошибки
@@ -216,24 +206,20 @@ AltCadesPlugin = class
 
   # Функция активации объектов КриптоПро ЭЦП Browser plug-in
   createObject: (name)->
-    #if (isIE()) {
-    #  // В Internet Explorer создаются COM-объекты
-    #  if (name.match(/X509Enrollment/i)) {
-    #    try {
-    #    // Объекты CertEnroll создаются через CX509EnrollmentWebClassFactory
-    #    var objCertEnrollClassFactory = document.getElementById("certEnrollClassFactory");
-    #    return objCertEnrollClassFactory.CreateObject(name);
-    #  }
-    #  catch (e) {
-    #  throw("Для создания обьектов X509Enrollment следует настроить веб-узел на использование проверки подлинности по протоколу HTTPS");
-    #  }
-    #}
-    #// Объекты CAPICOM и CAdESCOM создаются обычным способом
-    #return new ActiveXObject(name);
-    #}
+    if @isIE
+      # В Internet Explorer создаются COM-объекты
+      if name.match /X509Enrollment/i
+        try
+          # Объекты CertEnroll создаются через CX509EnrollmentWebClassFactory
+          return $('certEnrollClassFactory')[0].CreateObject name
+        catch error
+          throw 'setup_https_for_x509enrollment'
+
+      # Объекты CAPICOM и CAdESCOM создаются обычным способом
+      return new ActiveXObject(name)
 
     # В Firefox, Safari создаются объекты NPAPI
-    return @pluginObject.CreateObject(name)
+    return @pluginObject.CreateObject name
 
   ###*
   Возвращает параметр из объекта
@@ -264,7 +250,7 @@ AltCadesPlugin = class
 
       try
         if typeof objectName is 'string'
-          result = @pluginObject.CreateObject objectName
+          result = @createObject objectName
           if paramName
             result = @extractParam result, paramName
         else
@@ -282,7 +268,14 @@ AltCadesPlugin = class
   ###
   extractParam: (object, param)->
     if typeof param is 'object'
-      return object[param.method].apply object, param.args
+      # Здесь можно было бы использовать object[param.method].apply object, param.args
+      # Но в IE у внешних объектов нет матода .apply
+      switch param.args.length
+        when 0 then object[param.method]()
+        when 1 then object[param.method](param.args[0])
+        when 2 then object[param.method](param.args[0], param.args[1])
+        when 3 then object[param.method](param.args[0], param.args[1], param.args[2])
+        when 4 then object[param.method](param.args[0], param.args[1], param.args[2], param.args[3])
     else
       return object[param]
 
