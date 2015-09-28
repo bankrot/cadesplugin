@@ -34,6 +34,12 @@ gulp.task 'api', (callback)->
           cjs: 'jquery'
           global: '$'
           param: 'jquery'
+        }, {
+          name: 'es6-promise'
+          amd: 'es6-promise'
+          cjs: 'es6-promise'
+          global: '$'
+          param: 'es6-promise'
         }
       ]
   .pipe gulp.dest './src'
