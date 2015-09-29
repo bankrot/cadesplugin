@@ -593,6 +593,83 @@ AltCadesPlugin = (function() {
     })(this));
   };
 
+
+  /**
+  Подписывает данные
+  @method signData
+  @param data [String} Строка которую надо зашифровать (подписать)
+  @param certificate {Object} Объект сертификата полученный из плагина
+  @return {jQuery.Deferred} В первый аргумент колбэка передается зашифрованная строка
+   */
+
+  _Class.prototype.signData = function(data, certificate) {
+    var signedData, signer;
+    signer = null;
+    signedData = null;
+    return this.get('CAdESCOM.CPSigner').then((function(_this) {
+      return function(signer_) {
+        var attribute1, attribute2;
+        signer = signer_;
+        if (!_this.isWebkit) {
+          return;
+        }
+        attribute1 = null;
+        attribute2 = null;
+        return _this.get('CAdESCOM.CPAttribute').then(function(attribute1_) {
+          attribute1 = attribute1_;
+          return _this.set(attribute1, 'Name', 0);
+        }).then(function() {
+          return _this.set(attribute1, 'Value', new Date());
+        }).then(function() {
+          return _this.get(signer, 'AuthenticatedAttributes2', {
+            method: 'Add',
+            args: [attribute1]
+          });
+        }).then(function() {
+          return _this.get('CADESCOM.CPAttribute');
+        }).then(function(attribute2_) {
+          attribute2 = attribute2_;
+          return _this.set(attribute2, 'Name', 1);
+        }).then(function() {
+          return _this.set(attribute2, 'Value', 'Document Name');
+        }).then(function() {
+          return _this.get(signer, 'AuthenticatedAttributes2', {
+            method: 'Add',
+            args: [attribute2]
+          });
+        });
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        return _this.set(signer, 'Certificate', certificate);
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        return _this.get('CAdESCOM.CadesSignedData');
+      };
+    })(this)).then((function(_this) {
+      return function(signedData_) {
+        signedData = signedData_;
+        return _this.set(signedData, 'Content', data);
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        return _this.set(signer, 'Options', 1);
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        return _this.get(signedData, {
+          method: 'SignCades',
+          args: [signer, 1]
+        });
+      };
+    })(this)).then((function(_this) {
+      return function(signature) {
+        return signature;
+      };
+    })(this));
+  };
+
   return _Class;
 
 })();

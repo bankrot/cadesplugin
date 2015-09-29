@@ -435,3 +435,57 @@ AltCadesPlugin = class
         return $.Deferred -> @reject 'valid_certificates_not_found'
       else
         return certificatesList
+
+  ###*
+  Подписывает данные
+  @method signData
+  @param data [String} Строка которую надо зашифровать (подписать)
+  @param certificate {Object} Объект сертификата полученный из плагина
+  @return {jQuery.Deferred} В первый аргумент колбэка передается зашифрованная строка
+  ###
+  signData: (data, certificate)->
+    signer = null
+    signedData = null
+
+    @get 'CAdESCOM.CPSigner'
+    .then (signer_)=>
+      signer = signer_
+
+      # следующая часть нужна только для webkit плагина
+      unless @isWebkit
+        return
+
+      attribute1 = null
+      attribute2 = null
+
+      @get 'CAdESCOM.CPAttribute'
+      .then (attribute1_)=>
+        attribute1 = attribute1_
+        @set attribute1, 'Name', 0
+      .then =>
+        @set attribute1, 'Value', new Date()
+      .then =>
+        @get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute1]}
+      .then =>
+        @get 'CADESCOM.CPAttribute'
+      .then (attribute2_)=>
+        attribute2 = attribute2_
+        @set attribute2, 'Name', 1
+      .then =>
+        @set attribute2, 'Value', 'Document Name'
+      .then =>
+        @get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute2]}
+
+    .then =>
+      @set signer, 'Certificate', certificate
+    .then =>
+      @get 'CAdESCOM.CadesSignedData'
+    .then (signedData_)=>
+      signedData = signedData_
+      @set signedData, 'Content', data
+    .then =>
+      @set signer, 'Options', 1
+    .then =>
+      @get signedData, {method: 'SignCades', args: [signer, 1]}
+    .then (signature)=>
+      return signature

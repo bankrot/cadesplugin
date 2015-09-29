@@ -1,7 +1,5 @@
 altCadesPlugin = null
-store = null # хранилище сертификатов
-certificates = null # сертификаты
-certificatesList = []
+certificatesList = null
 $logBlock = null
 
 init = =>
@@ -70,63 +68,14 @@ init = =>
 @method signData
 ###
 signData = ->
-  signer = null
-  attribute = null
-  attribute2 = null
   certificateIndex = +$('#ui-certificates-select').val()
   data = $('#ui-data-input').val()
-  signedData = null
   unless data
     alert 'Введите данные для подписывания'
     return
-  $.when(
-    altCadesPlugin.get 'CAdESCOM.CPSigner'
-    altCadesPlugin.get 'CAdESCOM.CPAttribute'
-  ).then (signer_, attribute_)->
-    signer = signer_
-    unless altCadesPlugin.isWebkit
-      return
-    attribute = attribute_
-    altCadesPlugin.set attribute, 'Name', 0
-  .then ->
-    unless altCadesPlugin.isWebkit
-      return
-    altCadesPlugin.set attribute, 'Value', new Date()
-  .then ->
-    unless altCadesPlugin.isWebkit
-      return
-    altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute]}
-  .then ->
-    unless altCadesPlugin.isWebkit
-      return
-    altCadesPlugin.get 'CADESCOM.CPAttribute'
-  .then (attribute2_)->
-    unless altCadesPlugin.isWebkit
-      return
-    attribute2 = attribute2_
-    altCadesPlugin.set attribute2, 'Name', 1
-  .then ->
-    unless altCadesPlugin.isWebkit
-      return
-    altCadesPlugin.set attribute2, 'Value', 'Document Name'
-  .then ->
-    unless altCadesPlugin.isWebkit
-      return
-    altCadesPlugin.get signer, 'AuthenticatedAttributes2', {method: 'Add', args: [attribute2]}
-  .then ->
-    altCadesPlugin.set signer, 'Certificate', certificatesList[certificateIndex].certificate
-  .then ->
-    altCadesPlugin.get 'CAdESCOM.CadesSignedData'
-  .then (signedData_)->
-    signedData = signedData_
-    altCadesPlugin.set signedData, 'Content', data
-  .then ->
-    altCadesPlugin.set signer, 'Options', 1
-  .then ->
-    altCadesPlugin.get signedData, {method: 'SignCades', args: [signer, 1]}
+  altCadesPlugin.signData data, certificatesList[certificateIndex].certificate
   .then (signature)->
     $logBlock.append '<pre>' + signature + '</pre>'
-
   .fail (message)->
     if message
       $logBlock.append '<p style="color: #E23131">' + message + '<p>'
