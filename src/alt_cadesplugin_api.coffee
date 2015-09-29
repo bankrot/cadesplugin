@@ -180,7 +180,7 @@ AltCadesPlugin = class
     @pluginObject = object[0]
 
     if @isIE
-      ieObject = $ '<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility=hidden"></object>'
+      ieObject = $ '<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility:hidden;"></object>'
       $('body').append ieObject
 
   ###*
@@ -262,9 +262,10 @@ AltCadesPlugin = class
     return deferred
 
   ###*
+  Возвращает параметр объекта либо результат выполнения метода объекта (если param это объект)
   @method extractParam
-  @param object
-  @param paramName
+  @param object {Object} Объект из которого надо получить параметр
+  @param param {Object|String} Какой параметр надо получить (или какой метод выполнить)
   ###
   extractParam: (object, param)->
     if typeof param is 'object'
@@ -303,6 +304,7 @@ AltCadesPlugin = class
   @param object {Object} Объект плагина куда надо записать данные
   @param paramName {String} Название записываемого параметра
   @param value Значение параметра
+  @return {jQuery.Deferred}
   ###
   set: (object, paramName, value)=>
     if @isWebkit
@@ -318,3 +320,118 @@ AltCadesPlugin = class
       catch error
         deferred.reject error.message
       return deferred
+
+  ###*
+  Возвращает объект с версиями плагина
+  @method getVersion
+  @return {jQuery.Deferred} В первый аргумент колбэка передается объект с ключами major, minor, build, full
+  ###
+  getVersion: ->
+    $.when(
+      @get 'CAdESCOM.About', 'PluginVersion', 'MajorVersion'
+      @get 'CAdESCOM.About', 'PluginVersion', 'MinorVersion'
+      @get 'CAdESCOM.About', 'PluginVersion', 'BuildVersion'
+    )
+    .then (major, minor, build)->
+      result =
+        major: major
+        minor: minor
+        build: build
+        full: major + '.' + minor + '.' + build
+      return result
+
+  ###*
+  Возвращает версию КриптоПРО CSP
+  @method getCSPVersion
+  @return {jQuery.Deferred} В первый аргумент колбэка передается объект с ключами major, minor, build, full
+  ###
+  getCSPVersion: ->
+    $.when(
+      @get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'MajorVersion'
+      @get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'MinorVersion'
+      @get 'CAdESCOM.About', {method: 'CSPVersion', args: ['', 75]}, 'BuildVersion'
+    )
+    .then (major, minor, build)->
+      result =
+        major: major
+        minor: minor
+        build: build
+        full: major + '.' + minor + '.' + build
+      return result
+
+  ###*
+  Возвращает список сертификатов
+  @method getCertificates
+  @return {jQuery.Deferred} В первый аргумент колбэка передается массив,
+    каждый элемент которого это объект со следующими ключами:
+      subject: владелец сертификата
+      issuer: издатель сертификата
+      validFrom: дата начала действия сертификата, дата выдачи
+      validTo: дата окночания действия сертификата
+      algorithm: алгоритм шифрования
+      hasPrivateKey: наличие закрытого ключа
+      isValid: валидность
+      thumbprint: слепок, хэш
+      certificate: объект сертификата
+    Если произошла ошибка, то передается строка с описанием ошибки:
+    - certificates_not_found - Не найдено ни одного сертификата
+    - valid_certificates_not_found - Не найдено ни одного валидного сертификата
+    - certificate_read_error - Ошибка чтения одного из сертификатов
+  ###
+  getCertificates: ->
+    store = null
+    certificates = null
+    certificatesList = []
+    @get 'CAdESCOM.Store'
+    .then (_store)=>
+      store = _store
+      @get store, {method: 'Open', args: []}
+    .then =>
+      @get store, 'Certificates'
+    .then (_certificates)=>
+      certificates = _certificates
+      @get certificates, 'Count'
+    .then (count)=>
+      unless count
+        store.Close()
+        return $.Deferred -> @reject 'certificates_not_found'
+
+      # перебираем сертификаты, проверяем их на валидность, сохраняем всю инфу
+      chain = $.when()
+      $.each [1..count], (i, index)=>
+        certificate = null
+        chain = chain.then =>
+          @get certificates, {method: 'Item', args: [index]}
+        .then (certificate_)=>
+          certificate = certificate_
+          $.when(
+            @get certificate, 'SubjectName'
+            @get certificate, 'IssuerName'
+            @get certificate, 'ValidFromDate'
+            @get certificate, 'ValidToDate'
+            @get certificate, {method: 'PublicKey', args: []}, 'Algorithm', 'FriendlyName'
+            @get certificate, {method: 'HasPrivateKey', args: []}
+            @get certificate, {method: 'IsValid', args: []}, 'Result'
+            @get certificate, 'Thumbprint'
+          )
+        .then (subject, issuer, validFrom, validTo, algorithm, hasPrivateKey, isValid, thumbprint)=>
+          if ((new Date()) < (new Date(validTo))) and hasPrivateKey and isValid
+            certificatesList.push
+              subject: subject
+              issuer: issuer
+              validFrom: validFrom
+              validTo: validTo
+              algorithm: algorithm
+              hasPrivateKey: hasPrivateKey
+              isValid: isValid
+              thumbprint: thumbprint
+              certificate: certificate
+        .then null, =>
+          return $.Deferred -> @reject 'certificate_read_error'
+
+      return chain
+    .then =>
+      unless certificatesList.length
+        return $.Deferred -> @reject 'valid_certificates_not_found'
+      else
+        return certificatesList

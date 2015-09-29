@@ -253,7 +253,7 @@ AltCadesPlugin = (function() {
     $('body').append(object);
     this.pluginObject = object[0];
     if (this.isIE) {
-      ieObject = $('<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility=hidden"></object>');
+      ieObject = $('<object id="certEnrollClassFactory" classid="clsid:884e2049-217d-11da-b2a4-000e7bbb2b09" style="visibility:hidden;"></object>');
       return $('body').append(ieObject);
     }
   };
@@ -350,9 +350,10 @@ AltCadesPlugin = (function() {
 
 
   /**
+  Возвращает параметр объекта либо результат выполнения метода объекта (если param это объект)
   @method extractParam
-  @param object
-  @param paramName
+  @param object {Object} Объект из которого надо получить параметр
+  @param param {Object|String} Какой параметр надо получить (или какой метод выполнить)
    */
 
   _Class.prototype.extractParam = function(object, param) {
@@ -407,6 +408,7 @@ AltCadesPlugin = (function() {
   @param object {Object} Объект плагина куда надо записать данные
   @param paramName {String} Название записываемого параметра
   @param value Значение параметра
+  @return {jQuery.Deferred}
    */
 
   _Class.prototype.set = function(object, paramName, value) {
@@ -428,6 +430,167 @@ AltCadesPlugin = (function() {
       }
       return deferred;
     }
+  };
+
+
+  /**
+  Возвращает объект с версиями плагина
+  @method getVersion
+  @return {jQuery.Deferred} В первый аргумент колбэка передается объект с ключами major, minor, build, full
+   */
+
+  _Class.prototype.getVersion = function() {
+    return $.when(this.get('CAdESCOM.About', 'PluginVersion', 'MajorVersion'), this.get('CAdESCOM.About', 'PluginVersion', 'MinorVersion'), this.get('CAdESCOM.About', 'PluginVersion', 'BuildVersion')).then(function(major, minor, build) {
+      var result;
+      result = {
+        major: major,
+        minor: minor,
+        build: build,
+        full: major + '.' + minor + '.' + build
+      };
+      return result;
+    });
+  };
+
+
+  /**
+  Возвращает версию КриптоПРО CSP
+  @method getCSPVersion
+  @return {jQuery.Deferred} В первый аргумент колбэка передается объект с ключами major, minor, build, full
+   */
+
+  _Class.prototype.getCSPVersion = function() {
+    return $.when(this.get('CAdESCOM.About', {
+      method: 'CSPVersion',
+      args: ['', 75]
+    }, 'MajorVersion'), this.get('CAdESCOM.About', {
+      method: 'CSPVersion',
+      args: ['', 75]
+    }, 'MinorVersion'), this.get('CAdESCOM.About', {
+      method: 'CSPVersion',
+      args: ['', 75]
+    }, 'BuildVersion')).then(function(major, minor, build) {
+      var result;
+      result = {
+        major: major,
+        minor: minor,
+        build: build,
+        full: major + '.' + minor + '.' + build
+      };
+      return result;
+    });
+  };
+
+
+  /**
+  Возвращает список сертификатов
+  @method getCertificates
+  @return {jQuery.Deferred} В первый аргумент колбэка передается массив,
+    каждый элемент которого это объект со следующими ключами:
+      subject: владелец сертификата
+      issuer: издатель сертификата
+      validFrom: дата начала действия сертификата, дата выдачи
+      validTo: дата окночания действия сертификата
+      algorithm: алгоритм шифрования
+      hasPrivateKey: наличие закрытого ключа
+      isValid: валидность
+      thumbprint: слепок, хэш
+      certificate: объект сертификата
+    Если произошла ошибка, то передается строка с описанием ошибки:
+    - certificates_not_found - Не найдено ни одного сертификата
+    - valid_certificates_not_found - Не найдено ни одного валидного сертификата
+    - certificate_read_error - Ошибка чтения одного из сертификатов
+   */
+
+  _Class.prototype.getCertificates = function() {
+    var certificates, certificatesList, store;
+    store = null;
+    certificates = null;
+    certificatesList = [];
+    return this.get('CAdESCOM.Store').then((function(_this) {
+      return function(_store) {
+        store = _store;
+        return _this.get(store, {
+          method: 'Open',
+          args: []
+        });
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        return _this.get(store, 'Certificates');
+      };
+    })(this)).then((function(_this) {
+      return function(_certificates) {
+        certificates = _certificates;
+        return _this.get(certificates, 'Count');
+      };
+    })(this)).then((function(_this) {
+      return function(count) {
+        var chain, j, results;
+        if (!count) {
+          store.Close();
+          return $.Deferred(function() {
+            return this.reject('certificates_not_found');
+          });
+        }
+        chain = $.when();
+        $.each((function() {
+          results = [];
+          for (var j = 1; 1 <= count ? j <= count : j >= count; 1 <= count ? j++ : j--){ results.push(j); }
+          return results;
+        }).apply(this), function(i, index) {
+          var certificate;
+          certificate = null;
+          return chain = chain.then(function() {
+            return _this.get(certificates, {
+              method: 'Item',
+              args: [index]
+            });
+          }).then(function(certificate_) {
+            certificate = certificate_;
+            return $.when(_this.get(certificate, 'SubjectName'), _this.get(certificate, 'IssuerName'), _this.get(certificate, 'ValidFromDate'), _this.get(certificate, 'ValidToDate'), _this.get(certificate, {
+              method: 'PublicKey',
+              args: []
+            }, 'Algorithm', 'FriendlyName'), _this.get(certificate, {
+              method: 'HasPrivateKey',
+              args: []
+            }), _this.get(certificate, {
+              method: 'IsValid',
+              args: []
+            }, 'Result'), _this.get(certificate, 'Thumbprint'));
+          }).then(function(subject, issuer, validFrom, validTo, algorithm, hasPrivateKey, isValid, thumbprint) {
+            if (((new Date()) < (new Date(validTo))) && hasPrivateKey && isValid) {
+              return certificatesList.push({
+                subject: subject,
+                issuer: issuer,
+                validFrom: validFrom,
+                validTo: validTo,
+                algorithm: algorithm,
+                hasPrivateKey: hasPrivateKey,
+                isValid: isValid,
+                thumbprint: thumbprint,
+                certificate: certificate
+              });
+            }
+          }).then(null, function() {
+            return $.Deferred(function() {
+              return this.reject('certificate_read_error');
+            });
+          });
+        });
+        return chain;
+      };
+    })(this)).then((function(_this) {
+      return function() {
+        if (!certificatesList.length) {
+          return $.Deferred(function() {
+            return this.reject('valid_certificates_not_found');
+          });
+        } else {
+          return certificatesList;
+        }
+      };
+    })(this));
   };
 
   return _Class;
