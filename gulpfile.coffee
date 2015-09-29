@@ -26,16 +26,6 @@ gulp.task 'api', (callback)->
       return 'AltCadesPlugin'
     namespace: (file)->
       return 'AltCadesPlugin'
-    dependencies: (file)->
-      return [
-        {
-          name: 'jquery'
-          amd: 'jquery'
-          cjs: 'jquery'
-          global: '$'
-          param: 'jquery'
-        }
-      ]
   .pipe gulp.dest './src'
   .pipe gulp.dest './test/js'
   .pipe uglify()

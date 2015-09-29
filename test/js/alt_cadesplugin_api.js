@@ -1,12 +1,12 @@
 ;(function(root, factory) {
   if (typeof define === 'function' && define.amd) {
-    define(['jquery'], factory);
+    define([], factory);
   } else if (typeof exports === 'object') {
-    module.exports = factory(require('jquery'));
+    module.exports = factory();
   } else {
-    root.AltCadesPlugin = factory(root.$);
+    root.AltCadesPlugin = factory();
   }
-}(this, function(jquery) {
+}(this, function() {
 
 /**
 Библиотека для работы с плагином КриптоПРО
@@ -14,20 +14,15 @@
 Поддерживает плагин версии 2.0.12245
 Репозиторий https://github.com/bankrot/cadesplugin
  */
-var $, AltCadesPlugin, altCadespluginApiInstance,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  slice = [].slice;
-
-if (jquery && !$) {
-  $ = jquery;
-}
-
 
 /**
 Хранилизе для инстанса
 @property altCadespluginApiInstance
 @type {AltCadesPlugin}
  */
+var AltCadesPlugin, altCadespluginApiInstance,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  slice = [].slice;
 
 altCadespluginApiInstance = null;
 

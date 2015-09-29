@@ -1,4 +1,4 @@
-# Cadesplugin (beta)
+# Cadesplugin (0.0.7 beta)
 
 ### Альтернативная библиотека для работы с [браузерным плагином от КриптоПРО](https://www.cryptopro.ru/sites/default/files/products/cades/demopage/main.html).
 
@@ -34,7 +34,7 @@ src/alt_cadesplugin_api.min.js
 
 Для корректной работы скрипта необходимы следующие библиотеки
 
-1. [jQuery](https://github.com/jquery/jquery)
+1. [jquery](https://github.com/jquery/jquery)
 2. [es6-promise](https://github.com/jakearchibald/es6-promise)
 
 #### Использование
@@ -52,13 +52,13 @@ src/alt_cadesplugin_api.min.js
         ...
     });
 
-#### Получение данных
+#### Получение данных (метод get)
 
     altCadesPlugin.get('CAdESCOM.About').then(function(aboutObject){
         В этом колбэке доступна переменная aboutObject, в которой хранится только что созданный объект
     });
 
-#### Получение цепочки данных
+#### Получение цепочки данных (метод get)
 
     altCadesPlugin.get('CAdESCOM.About', 'PluginVersion', 'MajorVersion').then(function(majorVersion){
         В этом колбэке доступна переменная majorVersion, в которой хранится major-версия плагина
@@ -88,7 +88,7 @@ src/alt_cadesplugin_api.min.js
         altCadesPlugin.get(attribute, {method: 'propset_Value', args: [timeNow]});
     });
 
-#### Запись данных
+#### Запись данных (метод set)
 
 Запишет значение 0 в параметр Name объекта CAdESCOM.CPAttribute
 
@@ -97,6 +97,51 @@ src/alt_cadesplugin_api.min.js
     altCadesPlugin.get('CAdESCOM.CPAttribute')
     .then(function(attribute){
         altCadesPlugin.set(attribute, 'Name', 0);
+    });
+
+### Получение версии плагина (метод getVersion)
+
+    altCadesPlugin.getVersion()
+    .then(function(version){
+        version.major; // 2
+        version.minor; // 0
+        version.build; // 12245
+        version.full; // 2.0.12245
+    });
+
+### Получение версии КриптоПРО CSP (метод getCSPVersion)
+
+    altCadesPlugin.getCSPVersion()
+    .then(function(version){
+        version.major; // 4
+        version.minor; // 0
+        version.build; // 9630
+        version.full; // 4.0.9630
+    });
+
+### Получение списка сертификатов (метод getCertificates)
+
+    altCadesPlugin.getCertificates()
+    .then(function(certificates){
+        certificates.subject; // владелец сертификата
+        certificates.issuer; // издатель сертификата
+        certificates.validFrom; // дата начала действия сертификата, дата выдачи
+        certificates.validTo; // дата окночания действия сертификата
+        certificates.algorithm; // алгоритм шифрования
+        certificates.hasPrivateKey; // наличие закрытого ключа
+        certificates.isValid; // валидность
+        certificates.thumbprint; // слепок, хэш
+        certificates.certificate; // объект сертификата
+    });
+
+### Подписывание данных (метод signData)
+
+    altCadesPlugin.getCertificates()
+    .then(function(certificates){
+        certificate = certificates[0].certificate;
+        altCadesPlugin.signData('Hello World!', certificate);
+    }).then(function(signature){
+        alert(signature);
     });
 
 ## Как запустить тестовый сервер для проверки
@@ -113,12 +158,8 @@ src/alt_cadesplugin_api.min.js
 
     `npm install`
 
-5. Запускаем сборку
-
-    `gulp build`
-
-6. Запускаем сервер
+5. Запускаем сервер
 
     `gulp webserver`
 
-7. Тестовая страница будет доступна по адресу: http://localhost:8080/
+6. Тестовая страница будет доступна по адресу: http://localhost:8080/

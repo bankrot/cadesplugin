@@ -5,9 +5,6 @@
 Репозиторий https://github.com/bankrot/cadesplugin
 ###
 
-if jquery and not $
-  $ = jquery
-
 ###*
 Хранилизе для инстанса
 @property altCadespluginApiInstance
