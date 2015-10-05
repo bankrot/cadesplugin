@@ -16,7 +16,7 @@
  */
 
 /**
-Хранилизе для инстанса
+Хранилище для инстанса
 @property altCadespluginApiInstance
 @type {AltCadesPlugin}
  */
@@ -177,9 +177,16 @@ AltCadesPlugin = (function() {
 
   _Class.prototype.initWebkit = function() {
     var deferred;
-    $.getScript('chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js');
-    window.postMessage('cadesplugin_echo_request', '*');
     deferred = $.Deferred();
+    $.getScript('chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js').done((function(_this) {
+      return function() {
+        window.postMessage('cadesplugin_echo_request', '*');
+      };
+    })(this)).fail((function(_this) {
+      return function() {
+        return deferred.reject("Плагин не установлен");
+      };
+    })(this));
     $(window).on('message', (function(_this) {
       return function(event) {
         var ref;
