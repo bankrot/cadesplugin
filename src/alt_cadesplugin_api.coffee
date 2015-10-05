@@ -6,7 +6,7 @@
 ###
 
 ###*
-Хранилизе для инстанса
+Хранилище для инстанса
 @property altCadespluginApiInstance
 @type {AltCadesPlugin}
 ###
@@ -122,12 +122,15 @@ AltCadesPlugin = class
   @method initWebkit
   ###
   initWebkit: ->
+    deferred = $.Deferred()
 
     # подключаем файл из плагина
     $.getScript 'chrome-extension://iifchhfnnmpdbibifmljnfjhpififfog/nmcades_plugin_api.js'
-    window.postMessage 'cadesplugin_echo_request', '*'
-
-    deferred = $.Deferred()
+      .done =>
+        window.postMessage 'cadesplugin_echo_request', '*'
+        return
+      .fail =>
+        deferred.reject "Плагин не установлен"
 
     # обработчик события по загрузке плагина
     $(window).on 'message', (event)=>
