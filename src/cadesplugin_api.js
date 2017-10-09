@@ -160,7 +160,7 @@
         var elem = document.createElement('object');
         elem.setAttribute("id", "cadesplugin_object");
         elem.setAttribute("type", "application/x-cades");
-        elem.setAttribute("style", "visibility=hidden");
+		elem.setAttribute("style", "display: none");
         document.getElementsByTagName("body")[0].appendChild(elem);
         pluginObject = document.getElementById("cadesplugin_object");
         if(isIE())
