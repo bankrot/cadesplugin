@@ -1,10 +1,10 @@
-# Cadesplugin (0.0.7 beta)
+# Cadesplugin (0.0.8 beta)
 
 ### Альтернативная библиотека для работы с [браузерным плагином от КриптоПРО](https://www.cryptopro.ru/sites/default/files/products/cades/demopage/main.html).
 
 Поддерживает плагин начиная с версии 2
 
-Последняя версия библиотеки протестирована с плагином версии 2.0.12245
+Последняя версия библиотеки протестирована с плагином версии 2.0.14071
 
 Заменяет родную библиотеку [cadesplugin_api.js](http://www.cryptopro.ru/sites/default/files/products/cades/cadesplugin_api.js)
 
